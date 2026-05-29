@@ -1,0 +1,60 @@
+ai-pr-review-front/
+├── public/
+│
+├── src/
+│   ├── api/                     # 所有 API 请求
+│   │   ├── client.ts
+│   │   ├── review.ts
+│   │   └── health.ts
+│   │
+│   ├── components/              # 通用组件
+│   │   ├── common/
+│   │   ├── layout/
+│   │   ├── review/
+│   │   └── ui/
+│   │
+│   ├── pages/                   # 页面
+│   │   ├── ReviewCreate/
+│   │   ├── ReviewList/
+│   │   ├── ReviewDetail/
+│   │   └── NotFound/
+│   │
+│   ├── hooks/                   # 自定义 hooks
+│   │   ├── useReview.ts
+│   │   └── useHealth.ts
+│   │
+│   ├── router/                  # 路由配置
+│   │   └── index.tsx
+│   │
+│   ├── types/                   # TS 类型
+│   │   ├── api.ts
+│   │   └── review.ts
+│   │
+│   ├── services/                # 业务逻辑层
+│   │   └── review.service.ts
+│   │
+│   ├── store/                   # Zustand
+│   │   └── app.store.ts
+│   │
+│   ├── utils/
+│   │   ├── format.ts
+│   │   ├── error.ts
+│   │   └── pr.ts
+│   │
+│   ├── constants/
+│   │   └── severity.ts
+│   │
+│   ├── layouts/
+│   │   └── MainLayout.tsx
+│   │
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── index.css
+│
+├── .env.development
+├── .env.production
+├── vite.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+├── package.json
+└── README.md
