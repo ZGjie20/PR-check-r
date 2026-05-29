@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS pr_review_record (
+	id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+	pr_number BIGINT NOT NULL COMMENT 'PR编号',
+	pr_title VARCHAR(500) NOT NULL COMMENT 'PR标题',
+	repo_name VARCHAR(255) DEFAULT NULL COMMENT '仓库名称',
+	pr_url VARCHAR(1000) NOT NULL COMMENT 'PR地址链接',
+	ai_model VARCHAR(100) DEFAULT NULL COMMENT 'AI模型名称',
+	review_status VARCHAR(50) DEFAULT 'completed' COMMENT '审查状态：pending/processing/completed/failed',
+	total_issues INT DEFAULT 0 COMMENT '问题总数',
+	high_issues INT DEFAULT 0 COMMENT '高风险问题数',
+	medium_issues INT DEFAULT 0 COMMENT '中风险问题数',
+	low_issues INT DEFAULT 0 COMMENT '低风险问题数',
+	review_result JSON NOT NULL COMMENT 'AI审查完整结果(JSON格式)',
+	raw_diff LONGTEXT COMMENT '原始diff内容',
+	created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+	PRIMARY KEY (id),
+	KEY idx_pr_number (pr_number),
+	KEY idx_repo_name (repo_name),
+	KEY idx_created_at (created_at),
+	KEY idx_review_status (review_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='PR审查记录表';

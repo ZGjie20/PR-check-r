@@ -14,7 +14,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-const migrationFile = "migrations/001_create_reviews.sql"
+var migrationFiles = []string{
+	"migrations/001_create_reviews.sql",
+	"migrations/002_create_pr_review_record.sql",
+}
 
 type ReviewRepository struct {
 	db *sql.DB
@@ -42,19 +45,21 @@ func Connect(cfg *config.DatabaseConfig) (*sql.DB, error) {
 }
 
 func InitSchema(ctx context.Context, db *sql.DB) error {
-	data, err := os.ReadFile(migrationFile)
-	if err != nil {
-		return fmt.Errorf("read migration file: %w", err)
-	}
-
-	statements := strings.Split(string(data), ";")
-	for _, stmt := range statements {
-		stmt = strings.TrimSpace(stmt)
-		if stmt == "" {
-			continue
+	for _, migrationFile := range migrationFiles {
+		data, err := os.ReadFile(migrationFile)
+		if err != nil {
+			return fmt.Errorf("read migration file %s: %w", migrationFile, err)
 		}
-		if _, err := db.ExecContext(ctx, stmt); err != nil {
-			return fmt.Errorf("execute migration: %w", err)
+
+		statements := strings.Split(string(data), ";")
+		for _, stmt := range statements {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" {
+				continue
+			}
+			if _, err := db.ExecContext(ctx, stmt); err != nil {
+				return fmt.Errorf("execute migration %s: %w", migrationFile, err)
+			}
 		}
 	}
 	return nil
@@ -64,15 +69,36 @@ func NewReviewRepository(db *sql.DB) *ReviewRepository {
 	return &ReviewRepository{db: db}
 }
 
-func (r *ReviewRepository) Save(ctx context.Context, result *model.AIReviewResult) (int64, error) {
-	issues, err := json.Marshal(result.Issues)
+func (r *ReviewRepository) Save(ctx context.Context, input *model.ReviewSaveInput) (int64, error) {
+	result := input.Result
+	reviewResult, err := json.Marshal(result.ReviewResult)
 	if err != nil {
-		return 0, fmt.Errorf("marshal issues: %w", err)
+		return 0, fmt.Errorf("marshal review_result: %w", err)
 	}
 
-	res, err := r.db.ExecContext(ctx,
-		`INSERT INTO reviews (pr_title, pr_number, issues) VALUES (?, ?, ?)`,
-		result.PRTitle, result.PRNumber, issues,
+	reviewStatus := input.ReviewStatus
+	if reviewStatus == "" {
+		reviewStatus = "completed"
+	}
+
+	res, err := r.db.ExecContext(ctx, `
+		INSERT INTO pr_review_record (
+			pr_number, pr_title, repo_name, pr_url, ai_model, review_status,
+			total_issues, high_issues, medium_issues, low_issues,
+			review_result, raw_diff
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		result.PRNumber,
+		result.PRTitle,
+		nullIfEmpty(input.RepoName),
+		input.PRURL,
+		nullIfEmpty(input.AIModel),
+		reviewStatus,
+		result.TotalIssues,
+		result.HighIssues,
+		result.MediumIssues,
+		result.LowIssues,
+		reviewResult,
+		result.RawDiff,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("insert review: %w", err)
@@ -85,27 +111,30 @@ func (r *ReviewRepository) Save(ctx context.Context, result *model.AIReviewResul
 	return id, nil
 }
 
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
 func (r *ReviewRepository) GetByID(ctx context.Context, id int64) (*model.ReviewRecord, error) {
-	row := r.db.QueryRowContext(ctx,
-		`SELECT id, pr_title, pr_number, issues, created_at FROM reviews WHERE id = ?`,
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, pr_title, pr_number, repo_name, pr_url, ai_model, review_status,
+			total_issues, high_issues, medium_issues, low_issues,
+			review_result, raw_diff, created_at
+		FROM pr_review_record WHERE id = ?`,
 		id,
 	)
 
-	var record model.ReviewRecord
-	var issuesJSON []byte
-	var createdAt time.Time
-	if err := row.Scan(&record.ID, &record.PRTitle, &record.PRNumber, &issuesJSON, &createdAt); err != nil {
+	record, err := scanReviewRecord(row)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("scan review: %w", err)
 	}
-
-	if err := json.Unmarshal(issuesJSON, &record.Issues); err != nil {
-		return nil, fmt.Errorf("unmarshal issues: %w", err)
-	}
-	record.CreatedAt = createdAt.UTC().Format(time.RFC3339)
-	return &record, nil
+	return record, nil
 }
 
 func (r *ReviewRepository) List(ctx context.Context, page, limit int, prNumber int) ([]model.ReviewListItem, int, error) {
@@ -124,10 +153,10 @@ func (r *ReviewRepository) List(ctx context.Context, page, limit int, prNumber i
 	var countQuery string
 	var countArgs []any
 	if prNumber > 0 {
-		countQuery = `SELECT COUNT(*) FROM reviews WHERE pr_number = ?`
+		countQuery = `SELECT COUNT(*) FROM pr_review_record WHERE pr_number = ?`
 		countArgs = []any{prNumber}
 	} else {
-		countQuery = `SELECT COUNT(*) FROM reviews`
+		countQuery = `SELECT COUNT(*) FROM pr_review_record`
 	}
 	if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count reviews: %w", err)
@@ -136,13 +165,17 @@ func (r *ReviewRepository) List(ctx context.Context, page, limit int, prNumber i
 	var rows *sql.Rows
 	var err error
 	if prNumber > 0 {
-		rows, err = r.db.QueryContext(ctx,
-			`SELECT id, pr_title, pr_number, issues, created_at FROM reviews WHERE pr_number = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+		rows, err = r.db.QueryContext(ctx, `
+			SELECT id, pr_title, pr_number, total_issues, created_at
+			FROM pr_review_record WHERE pr_number = ?
+			ORDER BY created_at DESC LIMIT ? OFFSET ?`,
 			prNumber, limit, offset,
 		)
 	} else {
-		rows, err = r.db.QueryContext(ctx,
-			`SELECT id, pr_title, pr_number, issues, created_at FROM reviews ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+		rows, err = r.db.QueryContext(ctx, `
+			SELECT id, pr_title, pr_number, total_issues, created_at
+			FROM pr_review_record
+			ORDER BY created_at DESC LIMIT ? OFFSET ?`,
 			limit, offset,
 		)
 	}
@@ -154,16 +187,10 @@ func (r *ReviewRepository) List(ctx context.Context, page, limit int, prNumber i
 	var items []model.ReviewListItem
 	for rows.Next() {
 		var item model.ReviewListItem
-		var issuesJSON []byte
 		var createdAt time.Time
-		if err := rows.Scan(&item.ID, &item.PRTitle, &item.PRNumber, &issuesJSON, &createdAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.PRTitle, &item.PRNumber, &item.TotalIssues, &createdAt); err != nil {
 			return nil, 0, fmt.Errorf("scan review list item: %w", err)
 		}
-		var issues []model.ReviewIssue
-		if err := json.Unmarshal(issuesJSON, &issues); err != nil {
-			return nil, 0, fmt.Errorf("unmarshal issues: %w", err)
-		}
-		item.IssueCount = len(issues)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
 	}
@@ -174,4 +201,46 @@ func (r *ReviewRepository) List(ctx context.Context, page, limit int, prNumber i
 		items = []model.ReviewListItem{}
 	}
 	return items, total, nil
+}
+
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanReviewRecord(row rowScanner) (*model.ReviewRecord, error) {
+	var record model.ReviewRecord
+	var repoName, aiModel sql.NullString
+	var reviewResultJSON []byte
+	var createdAt time.Time
+
+	if err := row.Scan(
+		&record.ID,
+		&record.PRTitle,
+		&record.PRNumber,
+		&repoName,
+		&record.PRURL,
+		&aiModel,
+		&record.ReviewStatus,
+		&record.TotalIssues,
+		&record.HighIssues,
+		&record.MediumIssues,
+		&record.LowIssues,
+		&reviewResultJSON,
+		&record.RawDiff,
+		&createdAt,
+	); err != nil {
+		return nil, err
+	}
+
+	if repoName.Valid {
+		record.RepoName = repoName.String
+	}
+	if aiModel.Valid {
+		record.AIModel = aiModel.String
+	}
+	if err := json.Unmarshal(reviewResultJSON, &record.ReviewResult); err != nil {
+		return nil, fmt.Errorf("unmarshal review_result: %w", err)
+	}
+	record.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	return &record, nil
 }
