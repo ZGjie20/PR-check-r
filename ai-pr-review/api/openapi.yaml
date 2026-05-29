@@ -1,0 +1,267 @@
+openapi: 3.0.3
+info:
+  title: AI PR Review API
+  description: REST API for submitting GitHub PR reviews and querying review history.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      tags:
+        - System
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+
+  /api/v1/reviews:
+    post:
+      summary: Submit a PR for review
+      operationId: createReview
+      tags:
+        - Reviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewRequest"
+            example:
+              pr_url: https://github.com/org/repo/pull/123
+      responses:
+        "201":
+          description: Review completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateReviewResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      summary: List review history
+      operationId: listReviews
+      tags:
+        - Reviews
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: pr_number
+          in: query
+          description: Filter by PR number
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Paginated review list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewListResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/reviews/{id}:
+    get:
+      summary: Get review by ID
+      operationId: getReview
+      tags:
+        - Reviews
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Review details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewRecord"
+        "400":
+          description: Invalid review ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    CreateReviewRequest:
+      type: object
+      properties:
+        pr_url:
+          type: string
+          format: uri
+          description: GitHub pull request URL
+      required:
+        - pr_url
+
+    ReviewIssue:
+      type: object
+      properties:
+        file:
+          type: string
+        line:
+          type: integer
+        severity:
+          type: string
+          enum: [low, medium, high]
+        message:
+          type: string
+        suggestion:
+          type: string
+
+    CreateReviewResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        pr_title:
+          type: string
+        pr_number:
+          type: integer
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewIssue"
+        created_at:
+          type: string
+          format: date-time
+        output_file:
+          type: string
+      required:
+        - id
+        - pr_title
+        - pr_number
+        - issues
+        - created_at
+        - output_file
+
+    ReviewRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        pr_title:
+          type: string
+        pr_number:
+          type: integer
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewIssue"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - pr_title
+        - pr_number
+        - issues
+        - created_at
+
+    ReviewListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        pr_title:
+          type: string
+        pr_number:
+          type: integer
+        issue_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ReviewListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewListItem"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - limit
