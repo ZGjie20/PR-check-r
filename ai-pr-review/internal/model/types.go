@@ -16,6 +16,7 @@ type DiffChunk struct {
 
 	AddedLines   []string
 	DeletedLines []string
+	RawDiff      string
 
 	StartLine int
 	EndLine   int
