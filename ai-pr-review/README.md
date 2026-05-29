@@ -48,6 +48,7 @@ openai_api_key: ${OPENAI_API_KEY}
 model: ${MODEL}
 api_base: "https://api.deepseek.com/v1"
 output_dir: "output"
+prompt_dir: "prompts"
 
 server:
   host: "0.0.0.0"
@@ -151,9 +152,15 @@ ai-pr-review/
 │   ├── model/                   # 领域数据结构
 │   ├── github/                  # GitHub API 客户端
 │   ├── parser/                  # Diff 解析
-│   ├── ai/                      # LLM 接口与实现
+│   ├── prompt/                  # 提示词加载与渲染
+│   ├── ai/                      # LLM 接口
+│   │   └── langchain/           # langchaingo 实现
 │   ├── review/                  # Review 引擎
 │   └── output/                  # JSON 文件输出
+├── prompts/                     # 提示词模板（与代码解耦）
+│   └── review/
+│       ├── system.txt
+│       └── user.tmpl
 ├── pkg/validator/               # 输入校验
 ├── api/
 │   ├── openapi.yaml             # API 文档
@@ -180,7 +187,10 @@ ai-pr-review/
 | `internal/repository` | MySQL 连接与 review 数据 CRUD |
 | `internal/github` | 解析 PR URL，拉取 PR 信息、diff、commits |
 | `internal/parser` | 解析 unified diff hunk，识别语言与 Go 函数名 |
-| `internal/ai` | `LLM` 接口 + OpenAI 实现，prompt 独立管理 |
+| `internal/prompt` | 从 `prompts/` 加载模板并渲染审查提示词 |
+| `internal/ai` | `LLM` 接口定义 |
+| `internal/ai/langchain` | 基于 langchaingo 的 LLM 实现 |
+| `prompts/review` | 系统与用户提示词模板（可直接编辑，无需改代码） |
 | `internal/review` | 遍历 chunk 调用 AI，聚合 issues |
 | `internal/output` | 写入 JSON 文件 |
 
@@ -195,7 +205,8 @@ make run-api       # 启动 API 服务
 
 ## 扩展点
 
-- **LLM 接口**：`internal/ai.LLM` 可替换为 Claude、DeepSeek 等实现
+- **LLM 接口**：`internal/ai.LLM` 由 `internal/ai/langchain`（langchaingo）实现，可替换为其他 provider
+- **提示词**：编辑 `prompts/review/` 下模板即可调整审查策略，可通过 `prompt_dir` 配置切换目录
 - **FunctionDetector**：`internal/parser.FunctionDetector` 可扩展 Python/JS 函数识别
 
 ## 注意事项
