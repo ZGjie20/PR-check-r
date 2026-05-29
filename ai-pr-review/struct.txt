@@ -1,49 +1,49 @@
-myproject/
-├── cmd/                    # 可执行应用程序入口
-│   └── api/               # API服务主程序
-│       └── main.go
+ai-pr-review/
+├── cmd/                         # 可执行应用程序入口
+│   ├── api/main.go              # HTTP API 入口
+│   └── cli/main.go              # CLI 入口
 │
-├── internal/              # 私有代码，不能被外部导入
-│   ├── handler/          # HTTP处理器（控制器）
-│   │   ├── user.go
-│   │   └── product.go
-│   ├── service/          # 业务逻辑层
-│   │   ├── user.go
-│   │   └── product.go
-│   ├── repository/       # 数据访问层
-│   │   ├── user.go
-│   │   └── product.go
-│   ├── model/            # 数据模型（结构体）
-│   │   ├── user.go
-│   │   └── product.go
-│   └── middleware/       # 中间件
-│       ├── auth.go
-│       └── logger.go
+├── internal/                    # 私有代码，不能被外部导入
+│   ├── handler/                 # HTTP 处理器（控制器）
+│   ├── service/                 # 业务逻辑层
+│   ├── repository/              # 数据访问层
+│   ├── model/                   # 数据模型（结构体）
+│   ├── middleware/              # 中间件
+│   ├── github/                  # GitHub API 客户端
+│   ├── parser/                  # Diff 解析
+│   ├── prompt/                  # 提示词加载与渲染
+│   ├── ai/                      # LLM 接口
+│   │   └── langchain/           # langchaingo 实现
+│   ├── review/                  # Review 引擎
+│   └── output/                  # JSON 文件输出
 │
-├── pkg/                   # 可以被外部导入的公共库
-│   ├── db/               # 数据库连接/工具
-│   ├── logger/           # 日志封装
-│   └── validator/        # 验证工具
+├── prompts/                     # 提示词模板（与代码解耦）
+│   └── review/
+│       ├── system.txt
+│       └── user.tmpl
 │
-├── api/                   # API定义（OpenAPI/Swagger/Protobuf）
+├── pkg/                         # 可以被外部导入的公共库
+│   └── validator/               # 验证工具
+│
+├── api/                         # API 定义（OpenAPI / 路由）
 │   ├── openapi.yaml
-│   └── handler.go
+│   └── routes.go
 │
-├── config/                # 配置文件
-│   ├── config.yaml       # 默认配置
-│   └── config.go         # 配置解析
+├── config/                      # 配置文件
+│   ├── config.yaml
+│   ├── config.yaml.example
+│   └── config.go
 │
-├── migrations/            # 数据库迁移文件
-│   ├── 001_create_users.sql
-│   └── 002_create_products.sql
+├── migrations/                  # 数据库迁移文件
+│   └── 001_create_reviews.sql
 │
-├── scripts/               # 构建/部署脚本
+├── scripts/                     # 构建/部署脚本
 │   └── build.sh
 │
-├── test/                  # 外部测试（集成测试）
+├── test/                        # 外部测试（集成测试）
 │   └── api_test.go
 │
 ├── go.mod
 ├── go.sum
-├── Makefile              # 常用命令封装
+├── Makefile
 └── README.md
