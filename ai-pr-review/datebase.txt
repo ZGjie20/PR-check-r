@@ -1,0 +1,21 @@
+CREATE TABLE `pr_review_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `pr_number` bigint NOT NULL COMMENT 'PR编号',
+  `pr_title` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'PR标题',
+  `repo_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '仓库名称',
+  `pr_url` varchar(1000) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'PR地址链接',
+  `ai_model` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'AI模型名称',
+  `review_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'completed' COMMENT '审查状态：pending/processing/completed/failed',
+  `total_issues` int DEFAULT '0' COMMENT '问题总数',
+  `high_issues` int DEFAULT '0' COMMENT '高风险问题数',
+  `medium_issues` int DEFAULT '0' COMMENT '中风险问题数',
+  `low_issues` int DEFAULT '0' COMMENT '低风险问题数',
+  `review_result` json NOT NULL COMMENT 'AI审查完整结果(JSON格式)',
+  `raw_diff` longtext COLLATE utf8mb4_unicode_ci COMMENT '原始diff内容',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_pr_number` (`pr_number`) COMMENT 'PR编号索引',
+  KEY `idx_repo_name` (`repo_name`) COMMENT '仓库名称索引',
+  KEY `idx_created_at` (`created_at`) COMMENT '创建时间索引',
+  KEY `idx_review_status` (`review_status`) COMMENT '审查状态索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='PR审查记录表';

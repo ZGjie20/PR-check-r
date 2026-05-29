@@ -44,6 +44,7 @@ func (p *Parser) ParseDiff(diff string) []model.DiffChunk {
 				Function:     p.detector.DetectFunction(language, funcLines),
 				AddedLines:   append([]string(nil), hunk.addedLines...),
 				DeletedLines: append([]string(nil), hunk.deletedLines...),
+				RawDiff:      strings.Join(hunk.rawLines, "\n"),
 				StartLine:    hunk.newStart,
 				EndLine:      hunk.newEnd,
 			}
@@ -94,11 +95,12 @@ func extractFilePath(section string) string {
 }
 
 type hunkData struct {
-	newStart      int
-	newEnd        int
-	addedLines    []string
-	deletedLines  []string
-	contextLines  []string
+	newStart     int
+	newEnd       int
+	addedLines   []string
+	deletedLines []string
+	contextLines []string
+	rawLines     []string
 }
 
 func parseHunks(section string) []hunkData {
@@ -119,7 +121,11 @@ func parseHunks(section string) []hunkData {
 			}
 			newStart := atoi(matches[3])
 			newLine = newStart
-			current = &hunkData{newStart: newStart, newEnd: newStart}
+			current = &hunkData{
+				newStart: newStart,
+				newEnd:   newStart,
+				rawLines: []string{line},
+			}
 			continue
 		}
 
@@ -130,6 +136,8 @@ func parseHunks(section string) []hunkData {
 		if line == `\ No newline at end of file` {
 			continue
 		}
+
+		current.rawLines = append(current.rawLines, line)
 
 		prefix := line[0]
 		content := ""

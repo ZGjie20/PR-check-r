@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/parser"
@@ -54,6 +55,15 @@ func TestParseDiff_HunksAndGoFunction(t *testing.T) {
 	}
 	if len(first.AddedLines) != 7 {
 		t.Errorf("expected 7 added lines in first hunk, got %d", len(first.AddedLines))
+	}
+	if first.RawDiff == "" {
+		t.Error("expected non-empty RawDiff in first hunk")
+	}
+	if !strings.Contains(first.RawDiff, "@@ -10,6 +10,12 @@") {
+		t.Errorf("RawDiff missing hunk header, got %q", first.RawDiff)
+	}
+	if !strings.Contains(first.RawDiff, "+func StartWorker(ctx context.Context) {") {
+		t.Errorf("RawDiff missing added line, got %q", first.RawDiff)
 	}
 
 	second := chunks[1]
