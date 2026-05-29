@@ -62,6 +62,7 @@ func main() {
 		review.NewEngine(llm),
 		repository.NewReviewRepository(db),
 		cfg.OutputDir,
+		cfg.Model,
 	)
 
 	reviewHandler := handler.NewReviewHandler(reviewSvc)

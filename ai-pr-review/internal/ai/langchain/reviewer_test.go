@@ -84,6 +84,24 @@ func TestParseReviewResponseV2Format(t *testing.T) {
 	}
 }
 
+func TestParseReviewResponseLegacyComputesSeverity(t *testing.T) {
+	content := `{"issues":[
+		{"file":"","line":1,"severity":"high","message":"h","suggestion":"s"},
+		{"file":"","line":2,"severity":"low","message":"l","suggestion":"s"}
+	]}`
+
+	result, err := parseReviewResponse(content, "main.go")
+	if err != nil {
+		t.Fatalf("parseReviewResponse() error = %v", err)
+	}
+	if len(result.Issues) != 2 {
+		t.Fatalf("expected 2 issues, got %d", len(result.Issues))
+	}
+	if result.Issues[0].Severity != "high" {
+		t.Errorf("first issue severity = %q, want high", result.Issues[0].Severity)
+	}
+}
+
 func TestParseReviewResponseInvalidJSON(t *testing.T) {
 	_, err := parseReviewResponse("not json", "pkg/main.go")
 	if err == nil {

@@ -12,20 +12,22 @@
 要求：
 1. 必须使用简体中文描述 message 和 suggestion。
 2. 严格返回合法 JSON，不允许任何 Markdown、文字说明或多余内容。
-3. 返回的 JSON 结构必须包含：
+3. 返回的 JSON 结构必须严格为：
    {
-     "total_issues": <整数>,             // 问题总数
-     "high_issues": <整数>,              // 高风险问题数
-     "medium_issues": <整数>,            // 中风险问题数
-     "low_issues": <整数>,               // 低风险问题数
-     "raw_diff": "<原始 diff 内容>",      // 原始 diff，换行使用 \n
-     "review_result": {                   // 按风险等级分类的详细问题列表
-       "high": [{"file": "...", "line": ..., "message": "...", "suggestion": "..."}, ...],
-       "medium": [...],
-       "low": [...]
+     "total_issues": <整数>,
+     "high_issues": <整数>,
+     "medium_issues": <整数>,
+     "low_issues": <整数>,
+     "raw_diff": "<原始 diff 内容>",
+     "review_result": {
+       "high": [{"file": "...", "line": <整数>, "message": "...", "suggestion": "..."}],
+       "medium": [],
+       "low": []
      }
    }
-4. line 字段必须是新文件中的行号，且落在给定行号范围内。
-5. 如果没有问题，total_issues 和各级别数量为 0，review_result 中各数组为空。
-6. raw_diff 字段保留完整的 diff 内容。
-7. review_result 中的数组必须按照 high、medium、low 分类，以便前端展示。
+4. total_issues 必须等于 high_issues + medium_issues + low_issues，且与 review_result 各数组长度一致。
+5. line 字段必须是新文件中的行号，且落在给定行号范围内。
+6. review_result 中的问题项不要包含 severity 字段，风险等级由所在数组决定。
+7. 如果没有问题，total_issues 和各等级数量均为 0，review_result 中 high/medium/low 均为空数组 []。
+8. raw_diff 字段保留当前代码片段的完整 diff 内容，换行使用 \n 转义。
+9. 不要使用旧的扁平 issues 数组格式。

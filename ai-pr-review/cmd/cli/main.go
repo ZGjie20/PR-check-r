@@ -73,6 +73,7 @@ func main() {
 		review.NewEngine(llm),
 		repository.NewReviewRepository(db),
 		cfg.OutputDir,
+		cfg.Model,
 	)
 
 	result, err := reviewSvc.CreateReview(ctx, prURL)
