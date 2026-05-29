@@ -12,6 +12,7 @@ import (
 
 const DefaultAPIBase = "https://api.deepseek.com/v1"
 const DefaultOutputDir = "output"
+const DefaultPromptDir = "prompts"
 const DefaultServerHost = "0.0.0.0"
 const DefaultServerPort = 8080
 
@@ -44,6 +45,7 @@ type fileConfig struct {
 	APIBase      string             `yaml:"api_base"`
 	Model        string             `yaml:"model"`
 	OutputDir    string             `yaml:"output_dir"`
+	PromptDir    string             `yaml:"prompt_dir"`
 	Server       ServerConfig       `yaml:"server"`
 	Database     databaseFileConfig `yaml:"database"`
 }
@@ -54,6 +56,7 @@ type Config struct {
 	APIBase      string         `yaml:"api_base"`
 	Model        string         `yaml:"model"`
 	OutputDir    string         `yaml:"output_dir"`
+	PromptDir    string         `yaml:"prompt_dir"`
 	Server       ServerConfig   `yaml:"server"`
 	Database     DatabaseConfig `yaml:"database"`
 }
@@ -80,6 +83,7 @@ func LoadConfig(path string) (*Config, error) {
 		APIBase:      resolveConfigValue(raw.APIBase),
 		Model:        resolveConfigValue(raw.Model),
 		OutputDir:    resolveConfigValue(raw.OutputDir),
+		PromptDir:    resolveConfigValue(raw.PromptDir),
 		Server: ServerConfig{
 			Host: resolveConfigValue(raw.Server.Host),
 			Port: raw.Server.Port,
@@ -107,6 +111,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if strings.TrimSpace(cfg.OutputDir) == "" {
 		cfg.OutputDir = DefaultOutputDir
+	}
+	if strings.TrimSpace(cfg.PromptDir) == "" {
+		cfg.PromptDir = DefaultPromptDir
 	}
 	if strings.TrimSpace(cfg.Server.Host) == "" {
 		cfg.Server.Host = DefaultServerHost

@@ -10,10 +10,11 @@ import (
 
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/api"
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/config"
-	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/ai"
+	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/ai/langchain"
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/handler"
 	ghclient "github.com/ZGjie20/PR-check-r/ai-pr-review/internal/github"
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/parser"
+	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/prompt"
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/repository"
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/review"
 	"github.com/ZGjie20/PR-check-r/ai-pr-review/internal/service"
@@ -41,7 +42,20 @@ func main() {
 	}
 
 	ghClient := ghclient.NewClient(cfg.GitHubToken)
-	llm := ai.NewOpenAIClient(cfg.OpenAIAPIKey, cfg.APIBase, cfg.Model)
+
+	promptTemplates, err := prompt.Load(cfg.PromptDir)
+	if err != nil {
+		log.Fatalf("load prompts: %v", err)
+	}
+	promptRenderer, err := prompt.NewRenderer(promptTemplates)
+	if err != nil {
+		log.Fatalf("init prompt renderer: %v", err)
+	}
+
+	llm, err := langchain.NewReviewer(cfg.OpenAIAPIKey, cfg.APIBase, cfg.Model, promptRenderer)
+	if err != nil {
+		log.Fatalf("init llm: %v", err)
+	}
 	reviewSvc := service.NewReviewService(
 		ghClient,
 		parser.NewParser(),
