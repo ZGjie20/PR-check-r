@@ -1,0 +1,16 @@
+github_token: ${GITHUB_TOKEN}
+openai_api_key: ${OPENAI_API_KEY}
+api_base: "https://api.deepseek.com/v1"
+model: ${MODEL}
+output_dir: "output"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
+  name: ${DB_NAME}

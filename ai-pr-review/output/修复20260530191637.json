@@ -1,0 +1,28 @@
+{
+  "pr_title": "修复",
+  "pr_number": 5,
+  "total_issues": 2,
+  "high_issues": 2,
+  "medium_issues": 0,
+  "low_issues": 0,
+  "review_result": {
+    "pr_change_summary": "本次PR主要对配置文件和主程序进行了修改：\\n- config.yaml：移除了所有原有配置项（包括GitHub、服务、检查规则、通知等），仅保留一行token的硬编码值，导致配置大幅简化，可能用于测试或临时用途。\\n- main.go：修复了两处代码错误：将变量声明从错误的`int i=0`改为`var int i=0`（但该语法仍不正确，应为`var i int = 0`或`i := 0`）；将条件判断`if(i=5)`（赋值）改为`if(i==5)`（比较），修正了逻辑错误。\\n整体意图为快速修复和简化配置，但修改存在潜在语法问题和安全风险。",
+    "high": [
+      {
+        "file": "config.yaml",
+        "line": 1,
+        "message": "检测到敏感凭据硬编码：令牌字符串直接写入配置文件，存在泄露风险。",
+        "suggestion": "应使用环境变量（如 ${GITHUB_TOKEN}）或密钥管理服务注入令牌，不要将实际凭据写入版本控制。"
+      },
+      {
+        "file": "main.go",
+        "line": 8,
+        "message": "变量声明语法错误：`var int i=0;` 在 Go 中不正确，应使用 `i := 0` 或 `var i int = 0`。",
+        "suggestion": "将 `var int i=0;` 改为 `i := 0` 或 `var i int = 0`。"
+      }
+    ],
+    "medium": [],
+    "low": []
+  },
+  "raw_diff": "diff --git a/config.yaml b/config.yaml\nindex 027d0bf..820b46a 100644\n--- a/config.yaml\n+++ b/config.yaml\n@@ -1,42 +1,2 @@\n-# PR-check 项目配置文件\n \n-# GitHub 相关配置\n-github:\n-  # GitHub Personal Access Token，用于访问 API\n-  # 建议通过环境变量 GITHUB_TOKEN 注入，此处留空\n-  token: \"\"\n-  # 目标仓库，格式：owner/repo\n-  repository: \"\"\n-  # Webhook 密钥，用于校验 GitHub 推送事件\n-  webhook_secret: \"\"\n-\n-# 服务配置\n-server:\n-  host: \"0.0.0.0\"\n-  port: 8080\n-\n-# PR 检查规则\n-checks:\n-  # PR 标题格式（正则表达式），留空表示不校验\n-  title_pattern: \"\"\n-  # 是否要求 PR 描述非空\n-  require_description: true\n-  # 源分支命名规则（正则表达式），留空表示不校验\n-  branch_pattern: \"\"\n-  # 禁止合并的分支列表\n-  protected_branches:\n-    - main\n-    - master\n-  # 是否要求关联 Issue\n-  require_linked_issue: false\n-  # 允许的文件变更上限（0 表示不限制）\n-  max_changed_files: 0\n-\n-# 通知配置（可选）\n-notification:\n-  enabled: false\n-  # 支持：webhook / email\n-  type: webhook\n-  webhook_url: \"\"\n-\n-token: ${TOKEN}\n+token: dkljfaoirnbgpoairjgpa\ndiff --git a/main.go b/main.go\nindex eb7540e..990f08c 100644\n--- a/main.go\n+++ b/main.go\n@@ -5,8 +5,8 @@ import \"fmt\"\n func main() {\n \tfor {\n \t\tfmt.Println(\"hello, qiniu\")\n-\t\tint i=0;\n+\t\tvar int i=0;\n \t\ti++;\n-\t\tif(i=5){break;}\n+\t\tif(i==5){break;}\n \t}\n }\n"
+}

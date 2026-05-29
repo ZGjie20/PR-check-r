@@ -1,0 +1,49 @@
+myproject/
+├── cmd/                    # 可执行应用程序入口
+│   └── api/               # API服务主程序
+│       └── main.go
+│
+├── internal/              # 私有代码，不能被外部导入
+│   ├── handler/          # HTTP处理器（控制器）
+│   │   ├── user.go
+│   │   └── product.go
+│   ├── service/          # 业务逻辑层
+│   │   ├── user.go
+│   │   └── product.go
+│   ├── repository/       # 数据访问层
+│   │   ├── user.go
+│   │   └── product.go
+│   ├── model/            # 数据模型（结构体）
+│   │   ├── user.go
+│   │   └── product.go
+│   └── middleware/       # 中间件
+│       ├── auth.go
+│       └── logger.go
+│
+├── pkg/                   # 可以被外部导入的公共库
+│   ├── db/               # 数据库连接/工具
+│   ├── logger/           # 日志封装
+│   └── validator/        # 验证工具
+│
+├── api/                   # API定义（OpenAPI/Swagger/Protobuf）
+│   ├── openapi.yaml
+│   └── handler.go
+│
+├── config/                # 配置文件
+│   ├── config.yaml       # 默认配置
+│   └── config.go         # 配置解析
+│
+├── migrations/            # 数据库迁移文件
+│   ├── 001_create_users.sql
+│   └── 002_create_products.sql
+│
+├── scripts/               # 构建/部署脚本
+│   └── build.sh
+│
+├── test/                  # 外部测试（集成测试）
+│   └── api_test.go
+│
+├── go.mod
+├── go.sum
+├── Makefile              # 常用命令封装
+└── README.md
