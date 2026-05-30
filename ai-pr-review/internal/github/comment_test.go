@@ -80,3 +80,26 @@ func TestFormatRejectComment(t *testing.T) {
 		t.Fatalf("expected counts from CreateReviewResult, got:\n%s", got)
 	}
 }
+
+func TestFormatRejectCommentFromRecord(t *testing.T) {
+	record := &model.ReviewRecord{
+		TotalIssues:  1,
+		HighIssues:   1,
+		MediumIssues: 0,
+		LowIssues:    0,
+		ReviewResult: model.ReviewResultBySeverity{
+			PRChangeSummary: "record summary",
+			High: []model.ReviewIssueDetail{
+				{File: "main.go", Line: 10, Message: "issue"},
+			},
+		},
+	}
+
+	got := FormatRejectCommentFromRecord(record)
+	if !strings.Contains(got, "record summary") {
+		t.Fatalf("expected summary from ReviewRecord, got:\n%s", got)
+	}
+	if !strings.Contains(got, "`main.go:10` — issue") {
+		t.Fatalf("expected issue from ReviewRecord, got:\n%s", got)
+	}
+}

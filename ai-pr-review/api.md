@@ -1,8 +1,8 @@
 # AI PR Review API 文件
 
-> 版本：`v1.0.0`  
+> 版本：`v1.1.0`  
 > 對應 OpenAPI 規格：[`api/openapi.yaml`](api/openapi.yaml)  
-> 最後更新：2026-05-29
+> 最後更新：2026-05-30
 
 本文件描述 **AI PR Review** 後端 REST API 的完整介面規範，供前端（Web / 桌面客戶端）整合使用。後端以 Go + Gin 實作，負責接收 GitHub PR URL、呼叫 AI 進行程式碼審查，並將結果持久化至 MySQL 與本地 JSON 檔案。
 
@@ -52,7 +52,7 @@ make run-api
     → 同步回傳完整審查結果（201）
 ```
 
-前端可透過列表與詳情端點查詢歷史記錄，無需重複觸發審查。
+前端可透過列表與詳情端點查詢歷史記錄，無需重複觸發審查。審查完成後，前端可透過 Approve / Merge / Reject 端點將決策同步至 GitHub。
 
 ### 認證
 
@@ -103,6 +103,10 @@ make run-api
 | `POST` | `/api/v1/reviews` | 提交 PR 觸發審查 | `201` |
 | `GET` | `/api/v1/reviews` | 分頁查詢審查歷史 | `200` |
 | `GET` | `/api/v1/reviews/:id` | 依 ID 查詢審查詳情 | `200` |
+| `POST` | `/api/v1/reviews/:id/approve` | 向 GitHub 提交 APPROVE review | `200` |
+| `POST` | `/api/v1/reviews/:id/merge` | 合併 PR | `200` |
+| `GET` | `/api/v1/reviews/:id/reject-comment-draft` | 取得 AI 打回評論草稿 | `200` |
+| `POST` | `/api/v1/reviews/:id/reject` | 打回 PR 並發布評論 | `200` |
 
 ---
 
@@ -349,6 +353,192 @@ GET /api/v1/reviews/1
 
 ---
 
+### POST /api/v1/reviews/:id/approve
+
+向 GitHub 提交 `APPROVE` review，對應 CLI 審查後的第一步「同意」操作。
+
+#### 請求
+
+**Path 參數：**
+
+| 參數 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `id` | integer (int64) | 是 | 審查記錄 ID |
+
+**Body（可選）：**
+
+| 欄位 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `comment` | string | 否 | Approve review 附帶說明；未傳時使用 `review_result.pr_change_summary` |
+
+**請求範例：**
+
+```
+POST /api/v1/reviews/1/approve
+```
+
+或帶自訂說明：
+
+```json
+{
+  "comment": "LGTM，變更符合預期。"
+}
+```
+
+#### 回應
+
+**成功 `200`：** 回傳 [`PRActionResult`](#practionresult)
+
+```json
+{
+  "review_id": 1,
+  "action": "approved",
+  "message": "PR approved on GitHub."
+}
+```
+
+**錯誤回應：**
+
+| 狀態碼 | 情境 | `error` 值 |
+|--------|------|------------|
+| `400` | ID 無效 | `invalid review id` |
+| `400` | JSON 格式錯誤 | `invalid request body` |
+| `404` | 記錄不存在 | `review not found` |
+| `500` | GitHub API 失敗 | 具體錯誤訊息（含 403 權限不足等） |
+
+---
+
+### POST /api/v1/reviews/:id/merge
+
+合併 PR，對應 CLI 審查後 approve 之後的第二步「merge」。前端應在 Approve 成功後再展示 Merge 按鈕。
+
+#### 請求
+
+**Path 參數：**
+
+| 參數 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `id` | integer (int64) | 是 | 審查記錄 ID |
+
+**Body：** 無
+
+**請求範例：**
+
+```
+POST /api/v1/reviews/1/merge
+```
+
+#### 回應
+
+**成功 `200`：** 回傳 [`PRActionResult`](#practionresult)
+
+```json
+{
+  "review_id": 1,
+  "action": "merged",
+  "message": "PR merged successfully."
+}
+```
+
+**錯誤回應：**
+
+| 狀態碼 | 情境 | `error` 值 |
+|--------|------|------------|
+| `400` | ID 無效 | `invalid review id` |
+| `404` | 記錄不存在 | `review not found` |
+| `500` | GitHub Merge 失敗 | 具體錯誤訊息（405 已合併/已關閉、422 branch protection 等） |
+
+---
+
+### GET /api/v1/reviews/:id/reject-comment-draft
+
+取得 AI 審查結果自動生成的打回評論草稿，供前端填充可編輯 textarea。
+
+#### 請求
+
+**Path 參數：**
+
+| 參數 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `id` | integer (int64) | 是 | 審查記錄 ID |
+
+**請求範例：**
+
+```
+GET /api/v1/reviews/1/reject-comment-draft
+```
+
+#### 回應
+
+**成功 `200`：** 回傳 [`RejectCommentDraftResponse`](#rejectcommentdraftresponse)
+
+```json
+{
+  "review_id": 1,
+  "comment": "## AI PR Review — 请求修改\n\n**变更摘要：**\n...\n\n**问题统计：** 共 3 个（高 2 / 中 1 / 低 0）\n\n### 高优先级\n- `main.go:10` — ...\n  - 建议：..."
+}
+```
+
+**錯誤回應：**
+
+| 狀態碼 | 情境 | `error` 值 |
+|--------|------|------------|
+| `400` | ID 無效 | `invalid review id` |
+| `404` | 記錄不存在 | `review not found` |
+| `500` | 內部錯誤 | 具體錯誤訊息 |
+
+---
+
+### POST /api/v1/reviews/:id/reject
+
+打回 PR：向 GitHub 提交 `REQUEST_CHANGES` review，並發布相同內容的 PR comment。
+
+#### 請求
+
+**Path 參數：**
+
+| 參數 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `id` | integer (int64) | 是 | 審查記錄 ID |
+
+**Body：**
+
+| 欄位 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `comment` | string | 是 | 打回原因（可先透過 draft 端點取得草稿，編輯後提交） |
+
+**請求範例：**
+
+```json
+{
+  "comment": "## AI PR Review — 请求修改\n\n**变更摘要：**\n...\n\n请修复上述问题后重新提交。"
+}
+```
+
+#### 回應
+
+**成功 `200`：** 回傳 [`PRActionResult`](#practionresult)
+
+```json
+{
+  "review_id": 1,
+  "action": "rejected",
+  "message": "Requested changes and posted comment on GitHub."
+}
+```
+
+**錯誤回應：**
+
+| 狀態碼 | 情境 | `error` 值 |
+|--------|------|------------|
+| `400` | ID 無效 | `invalid review id` |
+| `400` | JSON 格式錯誤 | `invalid request body` |
+| `400` | `comment` 為空 | `comment is required` |
+| `404` | 記錄不存在 | `review not found` |
+| `500` | GitHub API 失敗 | 具體錯誤訊息 |
+
+---
+
 ## 資料模型
 
 以下 TypeScript 介面可直接用於前端型別定義。
@@ -371,6 +561,7 @@ interface ReviewIssueDetail {
 
 /** 依嚴重度分組的審查結果 */
 interface ReviewResultBySeverity {
+  pr_change_summary?: string;
   high: ReviewIssueDetail[];
   medium: ReviewIssueDetail[];
   low: ReviewIssueDetail[];
@@ -383,6 +574,16 @@ interface ReviewResultBySeverity {
 /** POST /api/v1/reviews 請求體 */
 interface CreateReviewRequest {
   pr_url: string;
+}
+
+/** POST /api/v1/reviews/:id/approve 請求體（可選） */
+interface ApproveReviewRequest {
+  comment?: string;
+}
+
+/** POST /api/v1/reviews/:id/reject 請求體 */
+interface RejectReviewRequest {
+  comment: string;
 }
 ```
 
@@ -446,6 +647,19 @@ interface ReviewListResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+/** Approve / Merge / Reject 操作回應 */
+interface PRActionResult {
+  review_id: number;
+  action: 'approved' | 'merged' | 'rejected';
+  message: string;
+}
+
+/** GET /api/v1/reviews/:id/reject-comment-draft 回應 */
+interface RejectCommentDraftResponse {
+  review_id: number;
+  comment: string;
 }
 ```
 
@@ -533,6 +747,48 @@ sequenceDiagram
                        → 失敗           → 顯示「服務不可用」提示
 ```
 
+### 流程四：審查後 Approve / Merge / Reject
+
+```mermaid
+sequenceDiagram
+    participant User as 使用者
+    participant FE as 前端
+    participant API as 後端 API
+    participant GH as GitHub API
+
+    User->>FE: 查看審查詳情
+    FE->>API: GET /api/v1/reviews/{id}
+    API-->>FE: 200 ReviewRecord
+
+    alt Approve 路徑
+        User->>FE: 點擊 Approve
+        FE->>API: POST /api/v1/reviews/{id}/approve
+        API->>GH: CreateReview APPROVE
+        API-->>FE: 200 PRActionResult action=approved
+        FE-->>User: 顯示 Merge 按鈕
+        User->>FE: 點擊 Merge
+        FE->>API: POST /api/v1/reviews/{id}/merge
+        API->>GH: PullRequests.Merge
+        API-->>FE: 200 PRActionResult action=merged
+    else Reject 路徑
+        User->>FE: 點擊 Reject
+        FE->>API: GET /api/v1/reviews/{id}/reject-comment-draft
+        API-->>FE: 200 RejectCommentDraftResponse
+        FE-->>User: 展示可編輯評論 textarea
+        User->>FE: 編輯後提交
+        FE->>API: POST /api/v1/reviews/{id}/reject
+        API->>GH: REQUEST_CHANGES + CreateComment
+        API-->>FE: 200 PRActionResult action=rejected
+    end
+```
+
+**前端頁面建議：**
+
+1. **詳情頁操作區**：在問題列表下方提供 Approve、Reject 按鈕
+2. **Merge 按鈕**：Approve 成功後才顯示（前端自行維護 UI 狀態，後端不做 approve 前置校驗）
+3. **Reject 彈窗**：先拉取 draft 填充 textarea，允許使用者修改後提交
+4. **錯誤提示**：Merge 失敗時展示 GitHub 錯誤（如 branch protection、CI 未通過）
+
 ### 建議路由對應
 
 | 前端路由 | 對應 API | 說明 |
@@ -540,6 +796,10 @@ sequenceDiagram
 | `/` 或 `/review/new` | `POST /api/v1/reviews` | 提交審查 |
 | `/reviews` | `GET /api/v1/reviews` | 歷史列表 |
 | `/reviews/:id` | `GET /api/v1/reviews/:id` | 審查詳情 |
+| `/reviews/:id` | `POST /api/v1/reviews/:id/approve` | Approve PR |
+| `/reviews/:id` | `POST /api/v1/reviews/:id/merge` | Merge PR（Approve 後） |
+| `/reviews/:id` | `GET /api/v1/reviews/:id/reject-comment-draft` | 取得打回評論草稿 |
+| `/reviews/:id` | `POST /api/v1/reviews/:id/reject` | 打回 PR |
 
 ---
 
@@ -587,6 +847,9 @@ class ApiError extends Error {
 | `invalid GitHub PR URL` | 請輸入有效的 GitHub PR 連結 |
 | `fetch PR` | 無法取得 PR 資訊，請確認連結正確且 PR 可存取 |
 | `run review` | AI 審查失敗，請稍後重試 |
+| `approve PR` | 無法 Approve，請確認 Token 權限 |
+| `merge PR` | 無法合併，可能 PR 已合併、branch protection 或 CI 未通過 |
+| `request changes` | 無法打回 PR，請確認 Token 權限 |
 
 ---
 
@@ -653,6 +916,46 @@ async function getReview(id: number): Promise<ReviewRecord> {
 }
 ```
 
+### Approve PR
+
+```typescript
+async function approveReview(id: number, comment?: string): Promise<PRActionResult> {
+  return apiRequest(`${API_BASE}/api/v1/reviews/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify(comment ? { comment } : {}),
+  });
+}
+```
+
+### Merge PR
+
+```typescript
+async function mergeReview(id: number): Promise<PRActionResult> {
+  return apiRequest(`${API_BASE}/api/v1/reviews/${id}/merge`, {
+    method: 'POST',
+  });
+}
+```
+
+### 取得打回評論草稿
+
+```typescript
+async function getRejectCommentDraft(id: number): Promise<RejectCommentDraftResponse> {
+  return apiRequest(`${API_BASE}/api/v1/reviews/${id}/reject-comment-draft`);
+}
+```
+
+### Reject PR
+
+```typescript
+async function rejectReview(id: number, comment: string): Promise<PRActionResult> {
+  return apiRequest(`${API_BASE}/api/v1/reviews/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  });
+}
+```
+
 ### 健康檢查
 
 ```typescript
@@ -682,6 +985,20 @@ curl "http://localhost:8080/api/v1/reviews?page=1&limit=20"
 
 # 查詢詳情
 curl http://localhost:8080/api/v1/reviews/1
+
+# Approve PR
+curl -X POST http://localhost:8080/api/v1/reviews/1/approve
+
+# Merge PR
+curl -X POST http://localhost:8080/api/v1/reviews/1/merge
+
+# 取得打回評論草稿
+curl http://localhost:8080/api/v1/reviews/1/reject-comment-draft
+
+# Reject PR
+curl -X POST http://localhost:8080/api/v1/reviews/1/reject \
+  -H "Content-Type: application/json" \
+  -d '{"comment":"请修复上述问题后重新提交。"}'
 ```
 
 ---
@@ -711,11 +1028,18 @@ curl http://localhost:8080/api/v1/reviews/1
 
 | 依賴 | 說明 |
 |------|------|
-| `GITHUB_TOKEN` | GitHub Personal Access Token（需 `repo` 權限） |
+| `GITHUB_TOKEN` | GitHub Personal Access Token（需 `repo` 權限；Approve/Merge/Reject 還需對目標倉庫的 review 與 merge 寫權限） |
 | `OPENAI_API_KEY` | LLM API Key |
 | MySQL | 審查記錄持久化 |
 
 若後端依賴未配置，前端會收到 `500` 錯誤。
+
+### GitHub PR 操作限制
+
+- **Branch protection：** 若 CI 未通過或需他人 review，Merge 可能返回 405/422
+- **已合併/已關閉 PR：** Approve/Merge/Reject 可能失敗，前端應展示 `error` 訊息
+- **重複操作：** GitHub 允許同一使用者多次 review；後端不做去重
+- **Inline comments：** 目前僅 PR 級 comment + review event，不含 diff 行內評論
 
 ### 目前不支援的功能
 
@@ -727,6 +1051,8 @@ curl http://localhost:8080/api/v1/reviews/1
 | 非同步任務查詢 | 未實作 |
 | Webhook 回調 | 未實作 |
 | 刪除審查記錄 | 未實作 |
+| Approve / Merge / Reject PR | **已實作**（CLI + REST API） |
+| PR 操作狀態持久化 | 未實作（不記錄 GitHub action 到 DB） |
 
 ---
 
@@ -736,7 +1062,8 @@ curl http://localhost:8080/api/v1/reviews/1
 |------|----------|
 | 路由註冊 | `api/routes.go` |
 | HTTP Handler | `internal/handler/review.go` |
-| 業務邏輯 | `internal/service/review.go` |
+| 業務邏輯 | `internal/service/review.go`、`internal/service/review_action.go` |
+| GitHub 客戶端 | `internal/github/client.go`、`internal/github/comment.go` |
 | 資料存取 | `internal/repository/review.go` |
 | 資料模型 | `internal/model/types.go` |
 | URL 驗證 | `pkg/validator/pr_url.go` |

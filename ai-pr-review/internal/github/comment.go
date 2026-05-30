@@ -17,6 +17,16 @@ func FormatRejectComment(result *model.CreateReviewResult) string {
 	)
 }
 
+func FormatRejectCommentFromRecord(record *model.ReviewRecord) string {
+	return FormatRejectCommentFromReview(
+		record.ReviewResult,
+		record.TotalIssues,
+		record.HighIssues,
+		record.MediumIssues,
+		record.LowIssues,
+	)
+}
+
 func FormatRejectCommentFromReview(
 	reviewResult model.ReviewResultBySeverity,
 	total, high, medium, low int,
