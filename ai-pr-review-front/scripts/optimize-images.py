@@ -15,6 +15,8 @@ IMAGES = [
     ("144158180_p0.jpg", "campfire.webp", 1000, 75),
     ("144153210_p0.jpg", "catgirl.webp", 700, 80),
     ("2.jpg", "history-bg.webp", 1600, 78),
+    ("7.jpg", "detail-banner.webp", 1600, 78),
+    ("139903261_p0.png", "detail-bg.webp", 1600, 78),
 ]
 
 
