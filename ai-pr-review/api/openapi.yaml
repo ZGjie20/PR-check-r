@@ -185,6 +185,9 @@ components:
     ReviewResultBySeverity:
       type: object
       properties:
+        pr_change_summary:
+          type: string
+          description: PR 变更总结（简体中文）
         high:
           type: array
           items:

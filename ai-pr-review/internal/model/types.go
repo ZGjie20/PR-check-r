@@ -47,9 +47,10 @@ func (i ReviewIssue) ToDetail() ReviewIssueDetail {
 }
 
 type ReviewResultBySeverity struct {
-	High   []ReviewIssueDetail `json:"high"`
-	Medium []ReviewIssueDetail `json:"medium"`
-	Low    []ReviewIssueDetail `json:"low"`
+	PRChangeSummary string              `json:"pr_change_summary"`
+	High            []ReviewIssueDetail `json:"high"`
+	Medium          []ReviewIssueDetail `json:"medium"`
+	Low             []ReviewIssueDetail `json:"low"`
 }
 
 func GroupIssuesBySeverity(issues []ReviewIssue) ReviewResultBySeverity {
@@ -99,6 +100,15 @@ type ReviewInput struct {
 	PRNumber int
 	Commits  []string
 	Chunk    DiffChunk
+}
+
+type SummaryInput struct {
+	PRTitle  string
+	PRNumber int
+	Author   string
+	Files    []string
+	Commits  []string
+	RawDiff  string
 }
 
 type ReviewResult struct {

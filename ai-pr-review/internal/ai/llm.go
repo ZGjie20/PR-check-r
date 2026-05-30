@@ -8,4 +8,5 @@ import (
 
 type LLM interface {
 	ReviewCode(ctx context.Context, input model.ReviewInput) (*model.ReviewResult, error)
+	SummarizePR(ctx context.Context, input model.SummaryInput) (string, error)
 }

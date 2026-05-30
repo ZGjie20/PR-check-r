@@ -47,12 +47,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("load prompts: %v", err)
 	}
+	summaryTemplates, err := prompt.LoadSummary(cfg.PromptDir)
+	if err != nil {
+		log.Fatalf("load summary prompts: %v", err)
+	}
 	promptRenderer, err := prompt.NewRenderer(promptTemplates)
 	if err != nil {
 		log.Fatalf("init prompt renderer: %v", err)
 	}
+	summaryRenderer, err := prompt.NewSummaryRenderer(summaryTemplates)
+	if err != nil {
+		log.Fatalf("init summary prompt renderer: %v", err)
+	}
 
-	llm, err := langchain.NewReviewer(cfg.OpenAIAPIKey, cfg.APIBase, cfg.Model, promptRenderer)
+	llm, err := langchain.NewReviewer(cfg.OpenAIAPIKey, cfg.APIBase, cfg.Model, promptRenderer, summaryRenderer)
 	if err != nil {
 		log.Fatalf("init llm: %v", err)
 	}

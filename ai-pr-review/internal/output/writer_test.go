@@ -21,6 +21,7 @@ func TestWriteReviewUsesNewJSONFormat(t *testing.T) {
 		MediumIssues: 0,
 		LowIssues:    1,
 		ReviewResult: model.ReviewResultBySeverity{
+			PRChangeSummary: "新增了 config.yaml 文件，并修改了 main.go 文件",
 			High: []model.ReviewIssueDetail{
 				{File: "config.yaml", Line: 42, Message: "高风险", Suggestion: "修复"},
 			},
@@ -51,6 +52,7 @@ func TestWriteReviewUsesNewJSONFormat(t *testing.T) {
 		`"pr_title"`,
 		`"total_issues"`,
 		`"review_result"`,
+		`"pr_change_summary"`,
 		`"raw_diff"`,
 		`"high"`,
 		`"low"`,
