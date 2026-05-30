@@ -42,6 +42,19 @@ func (e *Engine) Run(ctx context.Context, pr *model.PullRequest, chunks []model.
 	grouped := model.GroupIssuesBySeverity(allIssues)
 	total, high, medium, low := model.CountIssues(grouped)
 
+	summary, err := e.llm.SummarizePR(ctx, model.SummaryInput{
+		PRTitle:  pr.Title,
+		PRNumber: pr.Number,
+		Author:   pr.Author,
+		Files:    pr.Files,
+		Commits:  commits,
+		RawDiff:  pr.Diff,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("summarize PR: %w", err)
+	}
+	grouped.PRChangeSummary = summary
+
 	return &model.AIReviewResult{
 		PRTitle:      pr.Title,
 		PRNumber:     pr.Number,

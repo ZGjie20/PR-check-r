@@ -18,9 +18,10 @@ func TestCreateReviewResultJSONShape(t *testing.T) {
 		TotalIssues:  1,
 		HighIssues:   1,
 		ReviewResult: model.ReviewResultBySeverity{
-			High:   []model.ReviewIssueDetail{{File: "a.go", Line: 1, Message: "m", Suggestion: "s"}},
-			Medium: []model.ReviewIssueDetail{},
-			Low:    []model.ReviewIssueDetail{},
+			PRChangeSummary: "新增 a.go",
+			High:            []model.ReviewIssueDetail{{File: "a.go", Line: 1, Message: "m", Suggestion: "s"}},
+			Medium:          []model.ReviewIssueDetail{},
+			Low:             []model.ReviewIssueDetail{},
 		},
 		RawDiff:    "@@",
 		CreatedAt:  "2026-05-29T16:00:00Z",
@@ -35,7 +36,7 @@ func TestCreateReviewResultJSONShape(t *testing.T) {
 	if strings.Contains(content, `"issues"`) {
 		t.Fatalf("CreateReviewResult should not serialize issues: %s", content)
 	}
-	for _, key := range []string{`"total_issues"`, `"review_result"`, `"raw_diff"`, `"pr_url"`} {
+	for _, key := range []string{`"total_issues"`, `"review_result"`, `"pr_change_summary"`, `"raw_diff"`, `"pr_url"`} {
 		if !strings.Contains(content, key) {
 			t.Errorf("missing %s in %s", key, content)
 		}

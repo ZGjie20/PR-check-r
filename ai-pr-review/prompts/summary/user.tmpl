@@ -1,0 +1,10 @@
+PR Title: {{.PRTitle}}
+PR Number: {{.PRNumber}}
+{{if .Author}}Author: {{.Author}}
+{{end}}{{if .Files}}Changed files:
+{{range .Files}}- {{.}}
+{{end}}{{end}}{{if .Commits}}Recent commit messages:
+{{range $i, $c := .Commits}}{{if lt $i 5}}- {{$c}}
+{{end}}{{end}}{{end}}
+Full diff:
+{{.RawDiff}}

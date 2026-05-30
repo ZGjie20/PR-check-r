@@ -56,13 +56,23 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error loading prompts: %v\n", err)
 		os.Exit(1)
 	}
+	summaryTemplates, err := prompt.LoadSummary(cfg.PromptDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading summary prompts: %v\n", err)
+		os.Exit(1)
+	}
 	promptRenderer, err := prompt.NewRenderer(promptTemplates)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error initializing prompt renderer: %v\n", err)
 		os.Exit(1)
 	}
+	summaryRenderer, err := prompt.NewSummaryRenderer(summaryTemplates)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing summary prompt renderer: %v\n", err)
+		os.Exit(1)
+	}
 
-	llm, err := langchain.NewReviewer(cfg.OpenAIAPIKey, cfg.APIBase, cfg.Model, promptRenderer)
+	llm, err := langchain.NewReviewer(cfg.OpenAIAPIKey, cfg.APIBase, cfg.Model, promptRenderer, summaryRenderer)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error initializing LLM: %v\n", err)
 		os.Exit(1)
