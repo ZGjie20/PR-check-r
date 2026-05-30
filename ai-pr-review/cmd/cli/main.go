@@ -95,4 +95,14 @@ func main() {
 	fmt.Println("Review completed.")
 	fmt.Println("Result saved to:")
 	fmt.Println(result.OutputFile)
+
+	owner, repo, number, err := ghclient.ParsePRURL(prURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing PR URL: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := handlePRDecision(ctx, reader, ghClient, owner, repo, number, result); err != nil {
+		reportPRDecisionError(err)
+	}
 }
