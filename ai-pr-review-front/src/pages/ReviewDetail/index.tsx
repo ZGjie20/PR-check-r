@@ -130,7 +130,7 @@ export function ReviewDetailPage() {
         <IssueList reviewResult={data.review_result} />
       </section>
 
-      <DiffViewer diff={data.raw_diff} />
+      <DiffViewer diff={data.raw_diff} reviewResult={data.review_result} />
     </div>
   );
 }
