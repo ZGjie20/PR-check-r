@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useReviewDetail } from '@/hooks/useReview';
 import { ReviewSummary } from '@/components/review/ReviewSummary';
+import { PrChangeSummary } from '@/components/review/PrChangeSummary';
 import { IssueList } from '@/components/review/IssueList';
 import { DiffViewer } from '@/components/review/DiffViewer';
 import { DecorImage, FG_IMAGE_OPACITY } from '@/components/common/DecorImage';
@@ -118,6 +119,8 @@ export function ReviewDetailPage() {
         mediumIssues={data.medium_issues}
         lowIssues={data.low_issues}
       />
+
+      <PrChangeSummary summary={data.review_result.pr_change_summary} />
 
       <section>
         <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold">
