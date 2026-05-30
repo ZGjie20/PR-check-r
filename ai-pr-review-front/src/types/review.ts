@@ -73,3 +73,28 @@ export interface ReviewListResponse {
 }
 
 export type Severity = 'high' | 'medium' | 'low';
+
+export type PRAction = 'approved' | 'merged' | 'rejected';
+
+/** POST /api/v1/reviews/:id/approve 请求体（可选） */
+export interface ApproveReviewRequest {
+  comment?: string;
+}
+
+/** POST /api/v1/reviews/:id/reject 请求体 */
+export interface RejectReviewRequest {
+  comment: string;
+}
+
+/** Approve / Merge / Reject 操作响应 */
+export interface PRActionResult {
+  review_id: number;
+  action: PRAction;
+  message: string;
+}
+
+/** GET /api/v1/reviews/:id/reject-comment-draft 响应 */
+export interface RejectCommentDraftResponse {
+  review_id: number;
+  comment: string;
+}

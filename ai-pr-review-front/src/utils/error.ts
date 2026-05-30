@@ -29,6 +29,18 @@ export function getFriendlyErrorMessage(error: unknown): string {
     if (msg.includes('run review')) {
       return 'AI 审查失败，请稍后重试';
     }
+    if (msg.includes('approve PR')) {
+      return '无法 Approve，请确认 Token 权限';
+    }
+    if (msg.includes('merge PR')) {
+      return '无法合并，PR 可能已合并或 branch protection 阻止';
+    }
+    if (msg.includes('request changes')) {
+      return '无法打回 PR，请确认 Token 权限';
+    }
+    if (msg.includes('comment is required')) {
+      return '请输入打回原因';
+    }
     if (error.status === 404) {
       return '记录不存在';
     }
