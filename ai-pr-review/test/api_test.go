@@ -16,21 +16,62 @@ import (
 )
 
 type mockReviewService struct {
-	createFn func(ctx context.Context, prURL string) (*model.CreateReviewResult, error)
-	getFn    func(ctx context.Context, id int64) (*model.ReviewRecord, error)
-	listFn   func(ctx context.Context, page, limit, prNumber int) (*model.ReviewListResult, error)
+	createFn              func(ctx context.Context, prURL string) (*model.CreateReviewResult, error)
+	getFn                 func(ctx context.Context, id int64) (*model.ReviewRecord, error)
+	listFn                func(ctx context.Context, page, limit, prNumber int) (*model.ReviewListResult, error)
+	approveFn             func(ctx context.Context, id int64, comment string) (*model.PRActionResult, error)
+	mergeFn               func(ctx context.Context, id int64) (*model.PRActionResult, error)
+	rejectDraftFn         func(ctx context.Context, id int64) (*model.RejectCommentDraftResponse, error)
+	rejectFn              func(ctx context.Context, id int64, comment string) (*model.PRActionResult, error)
 }
 
 func (m *mockReviewService) CreateReview(ctx context.Context, prURL string) (*model.CreateReviewResult, error) {
-	return m.createFn(ctx, prURL)
+	if m.createFn != nil {
+		return m.createFn(ctx, prURL)
+	}
+	return nil, nil
 }
 
 func (m *mockReviewService) GetReview(ctx context.Context, id int64) (*model.ReviewRecord, error) {
-	return m.getFn(ctx, id)
+	if m.getFn != nil {
+		return m.getFn(ctx, id)
+	}
+	return nil, service.ErrReviewNotFound
 }
 
 func (m *mockReviewService) ListReviews(ctx context.Context, page, limit, prNumber int) (*model.ReviewListResult, error) {
-	return m.listFn(ctx, page, limit, prNumber)
+	if m.listFn != nil {
+		return m.listFn(ctx, page, limit, prNumber)
+	}
+	return nil, nil
+}
+
+func (m *mockReviewService) ApproveReview(ctx context.Context, id int64, comment string) (*model.PRActionResult, error) {
+	if m.approveFn != nil {
+		return m.approveFn(ctx, id, comment)
+	}
+	return nil, nil
+}
+
+func (m *mockReviewService) MergeReview(ctx context.Context, id int64) (*model.PRActionResult, error) {
+	if m.mergeFn != nil {
+		return m.mergeFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockReviewService) GetRejectCommentDraft(ctx context.Context, id int64) (*model.RejectCommentDraftResponse, error) {
+	if m.rejectDraftFn != nil {
+		return m.rejectDraftFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockReviewService) RejectReview(ctx context.Context, id int64, comment string) (*model.PRActionResult, error) {
+	if m.rejectFn != nil {
+		return m.rejectFn(ctx, id, comment)
+	}
+	return nil, nil
 }
 
 func setupTestRouter(svc *mockReviewService) *gin.Engine {
@@ -162,5 +203,152 @@ func TestListReviews(t *testing.T) {
 	}
 	if resp.Total != 1 || len(resp.Items) != 1 {
 		t.Fatalf("unexpected response: %+v", resp)
+	}
+}
+
+func TestApproveReviewSuccess(t *testing.T) {
+	router := setupTestRouter(&mockReviewService{
+		approveFn: func(ctx context.Context, id int64, comment string) (*model.PRActionResult, error) {
+			return &model.PRActionResult{
+				ReviewID: id,
+				Action:   "approved",
+				Message:  "PR approved on GitHub.",
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/1/approve", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp model.PRActionResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Action != "approved" {
+		t.Fatalf("unexpected action: %+v", resp)
+	}
+}
+
+func TestMergeReviewSuccess(t *testing.T) {
+	router := setupTestRouter(&mockReviewService{
+		mergeFn: func(ctx context.Context, id int64) (*model.PRActionResult, error) {
+			return &model.PRActionResult{
+				ReviewID: id,
+				Action:   "merged",
+				Message:  "PR merged successfully.",
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/1/merge", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp model.PRActionResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Action != "merged" {
+		t.Fatalf("unexpected action: %+v", resp)
+	}
+}
+
+func TestGetRejectCommentDraftSuccess(t *testing.T) {
+	router := setupTestRouter(&mockReviewService{
+		rejectDraftFn: func(ctx context.Context, id int64) (*model.RejectCommentDraftResponse, error) {
+			return &model.RejectCommentDraftResponse{
+				ReviewID: id,
+				Comment:  "## AI PR Review — 请求修改",
+			}, nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/1/reject-comment-draft", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp model.RejectCommentDraftResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Comment == "" {
+		t.Fatalf("expected non-empty comment draft, got %+v", resp)
+	}
+}
+
+func TestRejectReviewMissingComment(t *testing.T) {
+	router := setupTestRouter(&mockReviewService{
+		rejectFn: func(ctx context.Context, id int64, comment string) (*model.PRActionResult, error) {
+			return nil, service.ErrCommentRequired
+		},
+	})
+
+	body := []byte(`{"comment":"   "}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/1/reject", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestRejectReviewSuccess(t *testing.T) {
+	router := setupTestRouter(&mockReviewService{
+		rejectFn: func(ctx context.Context, id int64, comment string) (*model.PRActionResult, error) {
+			return &model.PRActionResult{
+				ReviewID: id,
+				Action:   "rejected",
+				Message:  "Requested changes and posted comment on GitHub.",
+			}, nil
+		},
+	})
+
+	body := []byte(`{"comment":"please fix issues"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/1/reject", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp model.PRActionResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Action != "rejected" {
+		t.Fatalf("unexpected action: %+v", resp)
+	}
+}
+
+func TestApproveReviewNotFound(t *testing.T) {
+	router := setupTestRouter(&mockReviewService{
+		approveFn: func(ctx context.Context, id int64, comment string) (*model.PRActionResult, error) {
+			return nil, service.ErrReviewNotFound
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/99/approve", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusNotFound, rec.Body.String())
 	}
 }
