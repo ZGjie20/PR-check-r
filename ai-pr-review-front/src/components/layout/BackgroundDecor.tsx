@@ -2,21 +2,37 @@ import { useLocation } from 'react-router-dom';
 import { FrostedImage, BG_IMAGE_OPACITY } from '@/components/common/FrostedImage';
 import { DECOR_IMAGES } from '@/constants/decorImages';
 
-const PAGE_BACKGROUNDS: Record<string, { src: string; objectPosition: string }> = {
-  '/reviews': {
-    src: DECOR_IMAGES.historyBg,
-    objectPosition: 'center center',
-  },
-};
+interface PageBackground {
+  src: string;
+  objectPosition: string;
+}
 
-const DEFAULT_BACKGROUND = {
+const DEFAULT_BACKGROUND: PageBackground = {
   src: DECOR_IMAGES.washitsu,
   objectPosition: 'center top',
 };
 
+function resolveBackground(pathname: string): PageBackground {
+  if (/^\/reviews\/\d+$/.test(pathname)) {
+    return {
+      src: DECOR_IMAGES.detailBg,
+      objectPosition: 'center center',
+    };
+  }
+
+  if (pathname === '/reviews') {
+    return {
+      src: DECOR_IMAGES.historyBg,
+      objectPosition: 'center center',
+    };
+  }
+
+  return DEFAULT_BACKGROUND;
+}
+
 export function BackgroundDecor() {
   const { pathname } = useLocation();
-  const bg = PAGE_BACKGROUNDS[pathname] ?? DEFAULT_BACKGROUND;
+  const bg = resolveBackground(pathname);
 
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
