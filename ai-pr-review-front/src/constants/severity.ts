@@ -29,3 +29,16 @@ export const SEVERITY_CONFIG: Record<Severity, SeverityConfig> = {
 };
 
 export const SEVERITY_ORDER: Severity[] = ['high', 'medium', 'low'];
+
+export const SEVERITY_UNDERLINE_CLASS: Record<Severity, string> = {
+  high: 'underline decoration-red-400 decoration-2 underline-offset-[3px] decoration-solid',
+  medium:
+    'underline decoration-yellow-400 decoration-2 underline-offset-[3px] decoration-solid',
+  low: 'underline decoration-pink-400 decoration-2 underline-offset-[3px] decoration-solid',
+};
+
+export const SEVERITY_LEGEND: Array<{ severity: Severity; label: string; lineClassName: string }> = [
+  { severity: 'high', label: '高风险', lineClassName: 'border-red-400' },
+  { severity: 'medium', label: '中风险', lineClassName: 'border-yellow-400' },
+  { severity: 'low', label: '低风险', lineClassName: 'border-pink-400' },
+];
