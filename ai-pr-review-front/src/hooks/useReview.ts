@@ -124,3 +124,110 @@ export function useReviewDetail(id: number | null) {
 
   return { data, loading, error, notFound };
 }
+
+export type ReviewActionState = 'idle' | 'approved' | 'merged' | 'rejected';
+
+export function useReviewActions(reviewId: number | null) {
+  const [actionState, setActionState] = useState<ReviewActionState>('idle');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+
+  const clearMessages = useCallback(() => {
+    setError(null);
+    setSuccessMessage(null);
+  }, []);
+
+  const approve = useCallback(
+    async (comment?: string) => {
+      if (reviewId === null || reviewId <= 0) {
+        return false;
+      }
+
+      setLoading(true);
+      clearMessages();
+
+      try {
+        const result = await reviewService.approveReview(reviewId, comment);
+        setActionState('approved');
+        setSuccessMessage(result.message || 'PR 已在 GitHub 上 Approve');
+        return true;
+      } catch (err) {
+        setError(getFriendlyErrorMessage(err));
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [reviewId, clearMessages],
+  );
+
+  const merge = useCallback(async () => {
+    if (reviewId === null || reviewId <= 0) {
+      return false;
+    }
+
+    setLoading(true);
+    clearMessages();
+
+    try {
+      const result = await reviewService.mergeReview(reviewId);
+      setActionState('merged');
+      setSuccessMessage(result.message || 'PR 已成功合并');
+      return true;
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err));
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [reviewId, clearMessages]);
+
+  const reject = useCallback(
+    async (comment: string) => {
+      if (reviewId === null || reviewId <= 0) {
+        return false;
+      }
+
+      setLoading(true);
+      clearMessages();
+
+      try {
+        const result = await reviewService.rejectReview(reviewId, comment);
+        setActionState('rejected');
+        setSuccessMessage(result.message || '已打回 PR 并发布评论');
+        setRejectOpen(false);
+        return true;
+      } catch (err) {
+        setError(getFriendlyErrorMessage(err));
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [reviewId, clearMessages],
+  );
+
+  const openReject = useCallback(() => {
+    clearMessages();
+    setRejectOpen(true);
+  }, [clearMessages]);
+
+  const closeReject = useCallback(() => {
+    setRejectOpen(false);
+  }, []);
+
+  return {
+    actionState,
+    loading,
+    error,
+    successMessage,
+    rejectOpen,
+    approve,
+    merge,
+    reject,
+    openReject,
+    closeReject,
+  };
+}

@@ -3,6 +3,7 @@ import { useReviewDetail } from '@/hooks/useReview';
 import { ReviewSummary } from '@/components/review/ReviewSummary';
 import { PrChangeSummary } from '@/components/review/PrChangeSummary';
 import { IssueList } from '@/components/review/IssueList';
+import { ReviewActions } from '@/components/review/ReviewActions';
 import { DiffViewer } from '@/components/review/DiffViewer';
 import { DecorImage, FG_IMAGE_OPACITY } from '@/components/common/DecorImage';
 import { DECOR_IMAGES } from '@/constants/decorImages';
@@ -129,6 +130,11 @@ export function ReviewDetailPage() {
         </h2>
         <IssueList reviewResult={data.review_result} />
       </section>
+
+      <ReviewActions
+        reviewId={data.id}
+        prChangeSummary={data.review_result.pr_change_summary}
+      />
 
       <DiffViewer diff={data.raw_diff} reviewResult={data.review_result} />
     </div>
