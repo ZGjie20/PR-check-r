@@ -165,71 +165,130 @@ components:
       required:
         - pr_url
 
-    ReviewIssue:
+    ReviewIssueDetail:
       type: object
       properties:
         file:
           type: string
         line:
           type: integer
-        severity:
-          type: string
-          enum: [low, medium, high]
         message:
           type: string
         suggestion:
           type: string
+      required:
+        - file
+        - line
+        - message
+        - suggestion
+
+    ReviewResultBySeverity:
+      type: object
+      properties:
+        high:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewIssueDetail"
+        medium:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewIssueDetail"
+        low:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewIssueDetail"
+      required:
+        - high
+        - medium
+        - low
+
+    ReviewSummaryFields:
+      type: object
+      properties:
+        total_issues:
+          type: integer
+        high_issues:
+          type: integer
+        medium_issues:
+          type: integer
+        low_issues:
+          type: integer
+        review_result:
+          $ref: "#/components/schemas/ReviewResultBySeverity"
+        raw_diff:
+          type: string
+      required:
+        - total_issues
+        - high_issues
+        - medium_issues
+        - low_issues
+        - review_result
+        - raw_diff
 
     CreateReviewResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        pr_title:
-          type: string
-        pr_number:
-          type: integer
-        issues:
-          type: array
-          items:
-            $ref: "#/components/schemas/ReviewIssue"
-        created_at:
-          type: string
-          format: date-time
-        output_file:
-          type: string
-      required:
-        - id
-        - pr_title
-        - pr_number
-        - issues
-        - created_at
-        - output_file
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            pr_title:
+              type: string
+            pr_number:
+              type: integer
+            repo_name:
+              type: string
+            pr_url:
+              type: string
+            ai_model:
+              type: string
+            review_status:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            output_file:
+              type: string
+          required:
+            - id
+            - pr_title
+            - pr_number
+            - pr_url
+            - review_status
+            - created_at
+            - output_file
+        - $ref: "#/components/schemas/ReviewSummaryFields"
 
     ReviewRecord:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        pr_title:
-          type: string
-        pr_number:
-          type: integer
-        issues:
-          type: array
-          items:
-            $ref: "#/components/schemas/ReviewIssue"
-        created_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - pr_title
-        - pr_number
-        - issues
-        - created_at
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            pr_title:
+              type: string
+            pr_number:
+              type: integer
+            repo_name:
+              type: string
+            pr_url:
+              type: string
+            ai_model:
+              type: string
+            review_status:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+          required:
+            - id
+            - pr_title
+            - pr_number
+            - pr_url
+            - review_status
+            - created_at
+        - $ref: "#/components/schemas/ReviewSummaryFields"
 
     ReviewListItem:
       type: object
@@ -241,11 +300,17 @@ components:
           type: string
         pr_number:
           type: integer
-        issue_count:
+        total_issues:
           type: integer
         created_at:
           type: string
           format: date-time
+      required:
+        - id
+        - pr_title
+        - pr_number
+        - total_issues
+        - created_at
 
     ReviewListResponse:
       type: object

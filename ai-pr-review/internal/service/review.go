@@ -22,6 +22,7 @@ type ReviewService struct {
 	engine    *review.Engine
 	repo      *repository.ReviewRepository
 	outputDir string
+	modelName string
 }
 
 func NewReviewService(
@@ -30,6 +31,7 @@ func NewReviewService(
 	engine *review.Engine,
 	repo *repository.ReviewRepository,
 	outputDir string,
+	modelName string,
 ) *ReviewService {
 	return &ReviewService{
 		ghClient:  ghClient,
@@ -37,6 +39,7 @@ func NewReviewService(
 		engine:    engine,
 		repo:      repo,
 		outputDir: outputDir,
+		modelName: modelName,
 	}
 }
 
@@ -63,18 +66,33 @@ func (s *ReviewService) CreateReview(ctx context.Context, prURL string) (*model.
 		return nil, fmt.Errorf("write output: %w", err)
 	}
 
-	id, err := s.repo.Save(ctx, reviewResult)
+	id, err := s.repo.Save(ctx, &model.ReviewSaveInput{
+		Result:       reviewResult,
+		RepoName:     owner + "/" + repo,
+		PRURL:        prURL,
+		AIModel:      s.modelName,
+		ReviewStatus: "completed",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("save review: %w", err)
 	}
 
 	return &model.CreateReviewResult{
-		ID:         id,
-		PRTitle:    reviewResult.PRTitle,
-		PRNumber:   reviewResult.PRNumber,
-		Issues:     reviewResult.Issues,
-		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
-		OutputFile: outputPath,
+		ID:           id,
+		PRTitle:      reviewResult.PRTitle,
+		PRNumber:     reviewResult.PRNumber,
+		RepoName:     owner + "/" + repo,
+		PRURL:        prURL,
+		AIModel:      s.modelName,
+		ReviewStatus: "completed",
+		TotalIssues:  reviewResult.TotalIssues,
+		HighIssues:   reviewResult.HighIssues,
+		MediumIssues: reviewResult.MediumIssues,
+		LowIssues:    reviewResult.LowIssues,
+		ReviewResult: reviewResult.ReviewResult,
+		RawDiff:      reviewResult.RawDiff,
+		CreatedAt:    time.Now().UTC().Format(time.RFC3339),
+		OutputFile:   outputPath,
 	}, nil
 }
 
