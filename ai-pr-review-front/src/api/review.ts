@@ -1,6 +1,8 @@
 import { apiRequest } from '@/api/client';
 import type {
   CreateReviewResponse,
+  PRActionResult,
+  RejectCommentDraftResponse,
   ReviewListResponse,
   ReviewRecord,
 } from '@/types/review';
@@ -34,4 +36,38 @@ export async function listReviews(
 
 export async function getReview(id: number): Promise<ReviewRecord> {
   return apiRequest<ReviewRecord>(`/api/v1/reviews/${id}`);
+}
+
+export async function approveReview(
+  id: number,
+  comment?: string,
+): Promise<PRActionResult> {
+  return apiRequest<PRActionResult>(`/api/v1/reviews/${id}/approve`, {
+    method: 'POST',
+    body: comment ? JSON.stringify({ comment }) : undefined,
+  });
+}
+
+export async function mergeReview(id: number): Promise<PRActionResult> {
+  return apiRequest<PRActionResult>(`/api/v1/reviews/${id}/merge`, {
+    method: 'POST',
+  });
+}
+
+export async function getRejectCommentDraft(
+  id: number,
+): Promise<RejectCommentDraftResponse> {
+  return apiRequest<RejectCommentDraftResponse>(
+    `/api/v1/reviews/${id}/reject-comment-draft`,
+  );
+}
+
+export async function rejectReview(
+  id: number,
+  comment: string,
+): Promise<PRActionResult> {
+  return apiRequest<PRActionResult>(`/api/v1/reviews/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  });
 }
