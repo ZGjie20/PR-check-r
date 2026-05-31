@@ -35,6 +35,7 @@ func TestLoadAndRenderReviewPrompt(t *testing.T) {
 			EndLine:      20,
 			AddedLines:   []string{"go func() {}"},
 			DeletedLines: []string{"time.Sleep(1)"},
+			RawDiff:      "@@ -10,5 +10,6 @@\n-time.Sleep(1)\n+go func() {}",
 		},
 	}
 
@@ -53,7 +54,8 @@ func TestLoadAndRenderReviewPrompt(t *testing.T) {
 		"Line range: 10-20",
 		"+ go func() {}",
 		"- time.Sleep(1)",
-		"goroutine 泄漏",
+		"Raw diff:",
+		"+go func() {}",
 	}
 	for _, want := range checks {
 		if !strings.Contains(rendered, want) {
