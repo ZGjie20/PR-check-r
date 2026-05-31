@@ -172,3 +172,14 @@ type ReviewSaveInput struct {
 	AIModel      string
 	ReviewStatus string
 }
+
+type PRActionResult struct {
+	ReviewID int64  `json:"review_id"`
+	Action   string `json:"action"`
+	Message  string `json:"message"`
+}
+
+type RejectCommentDraftResponse struct {
+	ReviewID int64  `json:"review_id"`
+	Comment  string `json:"comment"`
+}
