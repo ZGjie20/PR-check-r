@@ -75,10 +75,21 @@ func TestCreateReviewSuccess(t *testing.T) {
 	router := setupTestRouter(&mockReviewService{
 		createFn: func(ctx context.Context, prURL string) (*model.CreateReviewResult, error) {
 			return &model.CreateReviewResult{
-				ID:         1,
-				PRTitle:    "fix login",
-				PRNumber:   123,
-				Issues:     []model.ReviewIssue{},
+				ID:           1,
+				PRTitle:      "fix login",
+				PRNumber:     123,
+				PRURL:        prURL,
+				ReviewStatus: "completed",
+				TotalIssues:  1,
+				HighIssues:   1,
+				ReviewResult: model.ReviewResultBySeverity{
+					High: []model.ReviewIssueDetail{
+						{File: "service/user.go", Line: 45, Message: "问题", Suggestion: "建议"},
+					},
+					Medium: []model.ReviewIssueDetail{},
+					Low:    []model.ReviewIssueDetail{},
+				},
+				RawDiff:    "@@ ...",
 				CreatedAt:  "2026-05-29T16:00:00Z",
 				OutputFile: "output/fix_login.json",
 			}, nil
@@ -99,8 +110,11 @@ func TestCreateReviewSuccess(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.ID != 1 || resp.PRNumber != 123 {
+	if resp.ID != 1 || resp.PRNumber != 123 || resp.TotalIssues != 1 {
 		t.Fatalf("unexpected response: %+v", resp)
+	}
+	if len(resp.ReviewResult.High) != 1 {
+		t.Fatalf("expected 1 high issue, got %+v", resp.ReviewResult)
 	}
 }
 
@@ -125,7 +139,7 @@ func TestListReviews(t *testing.T) {
 		listFn: func(ctx context.Context, page, limit, prNumber int) (*model.ReviewListResult, error) {
 			return &model.ReviewListResult{
 				Items: []model.ReviewListItem{
-					{ID: 1, PRTitle: "fix login", PRNumber: 123, IssueCount: 2, CreatedAt: "2026-05-29T16:00:00Z"},
+					{ID: 1, PRTitle: "fix login", PRNumber: 123, TotalIssues: 2, CreatedAt: "2026-05-29T16:00:00Z"},
 				},
 				Total: 1,
 				Page:  1,

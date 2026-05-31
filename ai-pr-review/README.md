@@ -123,17 +123,32 @@ curl http://localhost:8080/api/v1/reviews/1
 
 ```json
 {
-  "pr_title": "fix user login",
-  "pr_number": 123,
-  "issues": [
-    {
-      "file": "service/user.go",
-      "line": 45,
-      "severity": "high",
-      "message": "goroutine may leak",
-      "suggestion": "add context cancellation"
-    }
-  ]
+  "pr_title": "config+main",
+  "pr_number": 1,
+  "total_issues": 2,
+  "high_issues": 1,
+  "medium_issues": 0,
+  "low_issues": 1,
+  "review_result": {
+    "high": [
+      {
+        "file": "config.yaml",
+        "line": 42,
+        "message": "硬编码敏感凭据：在配置文件中发现明文 token，存在泄露风险。",
+        "suggestion": "移除硬编码的 token，改为通过环境变量注入，并在代码中读取环境变量。"
+      }
+    ],
+    "medium": [],
+    "low": [
+      {
+        "file": "main.go",
+        "line": 6,
+        "message": "无限循环没有退出条件，可能导致程序无法正常退出。",
+        "suggestion": "考虑添加退出条件（如通道信号、时间限制或外部中断处理）以便优雅关闭。"
+      }
+    ]
+  },
+  "raw_diff": "diff --git a/config.yaml b/config.yaml\n..."
 }
 ```
 

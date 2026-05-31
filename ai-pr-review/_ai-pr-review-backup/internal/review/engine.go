@@ -17,11 +17,7 @@ func NewEngine(llm ai.LLM) *Engine {
 }
 
 func (e *Engine) Run(ctx context.Context, pr *model.PullRequest, chunks []model.DiffChunk, commits []string) (*model.AIReviewResult, error) {
-	result := &model.AIReviewResult{
-		PRTitle:  pr.Title,
-		PRNumber: pr.Number,
-		Issues:   []model.ReviewIssue{},
-	}
+	allIssues := make([]model.ReviewIssue, 0)
 
 	for _, chunk := range chunks {
 		if len(chunk.AddedLines) == 0 && len(chunk.DeletedLines) == 0 {
@@ -40,8 +36,21 @@ func (e *Engine) Run(ctx context.Context, pr *model.PullRequest, chunks []model.
 			return nil, fmt.Errorf("review chunk %s (%d-%d): %w", chunk.FilePath, chunk.StartLine, chunk.EndLine, err)
 		}
 
-		result.Issues = append(result.Issues, chunkResult.Issues...)
+		allIssues = append(allIssues, chunkResult.Issues...)
 	}
 
-	return result, nil
+	grouped := model.GroupIssuesBySeverity(allIssues)
+	total, high, medium, low := model.CountIssues(grouped)
+
+	return &model.AIReviewResult{
+		PRTitle:      pr.Title,
+		PRNumber:     pr.Number,
+		TotalIssues:  total,
+		HighIssues:   high,
+		MediumIssues: medium,
+		LowIssues:    low,
+		ReviewResult: grouped,
+		RawDiff:      pr.Diff,
+		Issues:       allIssues,
+	}, nil
 }
