@@ -59,9 +59,9 @@
 
 ## Demo 演示视频
 
-<!-- 在此填写演示视频链接 -->
 
-**视频链接：** _（待填写）_
+
+**视频链接：*【七牛项目】 https://www.bilibili.com/video/BV1v2VJ6SEcm/?share_source=copy_web&vd_source=6e72538666ff07b0ee5b6cf04100216b* 
 
 ### 启动前环境变量
 
