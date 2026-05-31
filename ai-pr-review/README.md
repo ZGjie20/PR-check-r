@@ -10,6 +10,7 @@
 4. 对每个 chunk 调用 LLM 进行风险分析
 5. 输出 review 结果到 `output/` 目录并写入 MySQL
 6. 通过 REST API 提交审查、查询结果与历史记录
+7. CLI 模式下审查完成后，可交互式 Approve / Merge 或打回 PR 并评论
 
 ## 流程
 
@@ -21,7 +22,7 @@ PR URL → GitHub API → Diff Parser → AI Review (per chunk) → JSON Output 
 
 - Go 1.23+
 - MySQL 5.7+ / 8.0+
-- GitHub Personal Access Token（需要 `repo` 权限读取 PR）
+- GitHub Personal Access Token（需要 `repo` 权限；CLI 的 Approve/Merge/打回评论还需对目标仓库的写入权限）
 - OpenAI 兼容 API Key（如 DeepSeek）
 
 ## 配置
@@ -71,6 +72,21 @@ go run ./cmd/cli
 ```
 https://github.com/org/repo/pull/123
 ```
+
+审查完成后，CLI 会展示 issue 统计与变更摘要，并进入交互决策：
+
+1. **Approve 路径**
+   - 询问 `Approve this PR? (y/yes)` → 输入 `y` 或 `yes` 时向 GitHub 提交 `APPROVE` review
+   - 再询问 `Merge this PR? (y/yes)` → 仅输入 `y` 或 `yes` 时调用 GitHub Merge API 合并 PR
+   - 任意其他输入均视为否（Approve 后不 merge 时仅保留 GitHub Approve 状态）
+
+2. **Reject 路径**
+   - Approve 步骤输入非 `y`/`yes` 时进入打回流程
+   - 自动生成包含 AI summary 与分级 issues 的评论草稿
+   - 可直接回车使用草稿，或输入 `y` 后编辑评论（以单独一行 `.` 结束）
+   - 向 GitHub 提交 `REQUEST_CHANGES` review，并发布相同内容的 PR comment
+
+**GitHub Token 要求：** PAT 需具备目标仓库的 PR review 与 merge 权限。若仓库启用了 branch protection（如需 CI 通过、需他人 review），Merge 可能返回 405/422，CLI 会打印 GitHub 错误信息。
 
 ### API 模式
 
@@ -200,7 +216,7 @@ ai-pr-review/
 | `internal/handler` | HTTP 请求处理，参数校验，JSON 响应 |
 | `internal/service` | 编排 GitHub 拉取、diff 解析、AI 审查、存储 |
 | `internal/repository` | MySQL 连接与 review 数据 CRUD |
-| `internal/github` | 解析 PR URL，拉取 PR 信息、diff、commits |
+| `internal/github` | 解析 PR URL，拉取 PR 信息、diff、commits；提交 review/comment/merge |
 | `internal/parser` | 解析 unified diff hunk，识别语言与 Go 函数名 |
 | `internal/prompt` | 从 `prompts/` 加载模板并渲染审查提示词 |
 | `internal/ai` | `LLM` 接口定义 |
