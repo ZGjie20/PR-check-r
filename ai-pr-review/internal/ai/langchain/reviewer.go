@@ -13,11 +13,12 @@ import (
 )
 
 type Reviewer struct {
-	llm      llms.Model
-	renderer *prompt.Renderer
+	llm             llms.Model
+	reviewRenderer  *prompt.Renderer
+	summaryRenderer *prompt.SummaryRenderer
 }
 
-func NewReviewer(apiKey, apiBase, model string, renderer *prompt.Renderer) (*Reviewer, error) {
+func NewReviewer(apiKey, apiBase, model string, reviewRenderer *prompt.Renderer, summaryRenderer *prompt.SummaryRenderer) (*Reviewer, error) {
 	llm, err := openai.New(
 		openai.WithToken(apiKey),
 		openai.WithBaseURL(apiBase),
@@ -29,15 +30,17 @@ func NewReviewer(apiKey, apiBase, model string, renderer *prompt.Renderer) (*Rev
 	}
 
 	return &Reviewer{
-		llm:      llm,
-		renderer: renderer,
+		llm:             llm,
+		reviewRenderer:  reviewRenderer,
+		summaryRenderer: summaryRenderer,
 	}, nil
 }
 
-func newReviewerWithModel(llm llms.Model, renderer *prompt.Renderer) *Reviewer {
+func newReviewerWithModel(llm llms.Model, reviewRenderer *prompt.Renderer, summaryRenderer *prompt.SummaryRenderer) *Reviewer {
 	return &Reviewer{
-		llm:      llm,
-		renderer: renderer,
+		llm:             llm,
+		reviewRenderer:  reviewRenderer,
+		summaryRenderer: summaryRenderer,
 	}
 }
 
@@ -56,7 +59,7 @@ type aiResponseV2 struct {
 }
 
 func (r *Reviewer) ReviewCode(ctx context.Context, input model.ReviewInput) (*model.ReviewResult, error) {
-	userPrompt, err := r.renderer.RenderUser(input)
+	userPrompt, err := r.reviewRenderer.RenderUser(input)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +67,7 @@ func (r *Reviewer) ReviewCode(ctx context.Context, input model.ReviewInput) (*mo
 	resp, err := r.llm.GenerateContent(ctx, []llms.MessageContent{
 		{
 			Role:  llms.ChatMessageTypeSystem,
-			Parts: []llms.ContentPart{llms.TextContent{Text: r.renderer.SystemMessage()}},
+			Parts: []llms.ContentPart{llms.TextContent{Text: r.reviewRenderer.SystemMessage()}},
 		},
 		{
 			Role:  llms.ChatMessageTypeHuman,
@@ -80,6 +83,51 @@ func (r *Reviewer) ReviewCode(ctx context.Context, input model.ReviewInput) (*mo
 	}
 
 	return parseReviewResponse(resp.Choices[0].Content, input.Chunk.FilePath)
+}
+
+type summaryResponse struct {
+	PRChangeSummary string `json:"pr_change_summary"`
+}
+
+func (r *Reviewer) SummarizePR(ctx context.Context, input model.SummaryInput) (string, error) {
+	userPrompt, err := r.summaryRenderer.RenderUser(input)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := r.llm.GenerateContent(ctx, []llms.MessageContent{
+		{
+			Role:  llms.ChatMessageTypeSystem,
+			Parts: []llms.ContentPart{llms.TextContent{Text: r.summaryRenderer.SystemMessage()}},
+		},
+		{
+			Role:  llms.ChatMessageTypeHuman,
+			Parts: []llms.ContentPart{llms.TextContent{Text: userPrompt}},
+		},
+	}, llms.WithTemperature(0.2))
+	if err != nil {
+		return "", fmt.Errorf("chat completion for summary: %w", err)
+	}
+
+	if resp == nil || len(resp.Choices) == 0 {
+		return "", fmt.Errorf("llm returned no choices for summary")
+	}
+
+	return parseSummaryResponse(resp.Choices[0].Content)
+}
+
+func parseSummaryResponse(content string) (string, error) {
+	content = strings.TrimSpace(content)
+
+	var parsed summaryResponse
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		snippet := content
+		if len(snippet) > 200 {
+			snippet = snippet[:200] + "..."
+		}
+		return "", fmt.Errorf("parse summary response: %w (content: %s)", err, snippet)
+	}
+	return strings.TrimSpace(parsed.PRChangeSummary), nil
 }
 
 func parseReviewResponse(content, defaultFile string) (*model.ReviewResult, error) {

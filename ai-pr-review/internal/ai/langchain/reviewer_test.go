@@ -33,9 +33,17 @@ func TestReviewCodeParsesResponse(t *testing.T) {
 		t.Fatalf("NewRenderer() error = %v", err)
 	}
 
+	summaryRenderer, err := prompt.NewSummaryRenderer(&prompt.SummaryTemplates{
+		System: "summary system",
+		User:   "summary {{.PRTitle}}",
+	})
+	if err != nil {
+		t.Fatalf("NewSummaryRenderer() error = %v", err)
+	}
+
 	reviewer := newReviewerWithModel(&mockLLM{
 		response: `{"issues":[{"file":"","line":12,"severity":"high","message":"问题","suggestion":"建议"}]}`,
-	}, renderer)
+	}, renderer, summaryRenderer)
 
 	result, err := reviewer.ReviewCode(context.Background(), model.ReviewInput{
 		PRTitle: "test pr",
@@ -104,6 +112,38 @@ func TestParseReviewResponseLegacyComputesSeverity(t *testing.T) {
 
 func TestParseReviewResponseInvalidJSON(t *testing.T) {
 	_, err := parseReviewResponse("not json", "pkg/main.go")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestSummarizePRParsesResponse(t *testing.T) {
+	summaryRenderer, err := prompt.NewSummaryRenderer(&prompt.SummaryTemplates{
+		System: "summary system",
+		User:   "summary {{.PRTitle}}",
+	})
+	if err != nil {
+		t.Fatalf("NewSummaryRenderer() error = %v", err)
+	}
+
+	reviewer := newReviewerWithModel(&mockLLM{
+		response: `{"pr_change_summary":"新增了 config.yaml，并修改了 main.go"}`,
+	}, nil, summaryRenderer)
+
+	summary, err := reviewer.SummarizePR(context.Background(), model.SummaryInput{
+		PRTitle: "config+main",
+		RawDiff: "diff --git a/config.yaml",
+	})
+	if err != nil {
+		t.Fatalf("SummarizePR() error = %v", err)
+	}
+	if summary != "新增了 config.yaml，并修改了 main.go" {
+		t.Errorf("summary = %q, want expected text", summary)
+	}
+}
+
+func TestParseSummaryResponseInvalidJSON(t *testing.T) {
+	_, err := parseSummaryResponse("not json")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
