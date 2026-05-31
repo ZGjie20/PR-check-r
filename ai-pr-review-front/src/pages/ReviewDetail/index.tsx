@@ -62,10 +62,10 @@ export function ReviewDetailPage() {
   return (
     <div className="space-y-6">
       <DecorImage
-        src={DECOR_IMAGES.warrior}
+        src={DECOR_IMAGES.detailBanner}
         variant="banner"
         opacity={FG_IMAGE_OPACITY.banner}
-        objectPosition="center 20%"
+        objectPosition="center center"
         className="h-32 sm:h-40"
       />
 

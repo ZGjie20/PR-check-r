@@ -2,6 +2,8 @@
 export const DECOR_IMAGES = {
   washitsu: '/images/decor/washitsu.webp',
   historyBg: '/images/decor/history-bg.webp',
+  detailBg: '/images/decor/detail-bg.webp',
+  detailBanner: '/images/decor/detail-banner.webp',
   warrior: '/images/decor/warrior.webp',
   pool: '/images/decor/pool.webp',
   campfire: '/images/decor/campfire.webp',
