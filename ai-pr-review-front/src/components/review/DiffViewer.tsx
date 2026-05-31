@@ -54,9 +54,7 @@ export function DiffViewer({ diff, reviewResult }: DiffViewerProps) {
   const [expanded, setExpanded] = useState(false);
 
   const { lines, highlightedCount, hasIssues } = useMemo(() => {
-    const issueMap = reviewResult
-      ? buildIssueLineMap(reviewResult, diff)
-      : new Map();
+    const issueMap = reviewResult ? buildIssueLineMap(reviewResult) : new Map();
     const parsedLines = parseDiffWithIssues(diff, issueMap);
     const highlighted = countHighlightedLines(parsedLines);
     const issueCount =

@@ -1,3 +1,4 @@
+
 # PR-check-r — AI PR Review Assistant
 
 基于 AI 的 GitHub Pull Request 自动代码审查工具，包含 Go 后端与 React Web 前端。
@@ -335,3 +336,5 @@ server:
 
 - 后端详细说明：[`ai-pr-review/README.md`](ai-pr-review/README.md)
 - 前端详细说明：[`ai-pr-review-front/README.md`](ai-pr-review-front/README.md)
+
+
