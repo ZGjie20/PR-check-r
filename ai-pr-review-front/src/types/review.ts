@@ -8,6 +8,7 @@ export interface ReviewIssueDetail {
 
 /** 依严重程度分组的审查结果 */
 export interface ReviewResultBySeverity {
+  pr_change_summary?: string;
   high: ReviewIssueDetail[];
   medium: ReviewIssueDetail[];
   low: ReviewIssueDetail[];

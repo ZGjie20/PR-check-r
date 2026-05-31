@@ -11,6 +11,7 @@ const FEATURES = [
   { icon: '🔍', title: '智能分析', desc: 'AI 逐块审查代码变更' },
   { icon: '⚡', title: '实时反馈', desc: '同步返回完整审查结果' },
   { icon: '📋', title: '分级报告', desc: '按高中低风险分类展示' },
+  { icon: '📝', title: '变更总结', desc: '自动生成 PR 变更说明' },
 ];
 
 export function ReviewCreatePage() {
