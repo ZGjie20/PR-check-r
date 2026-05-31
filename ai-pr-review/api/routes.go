@@ -16,5 +16,9 @@ func RegisterRoutes(router *gin.Engine, reviewHandler *handler.ReviewHandler) {
 		v1.POST("/reviews", reviewHandler.Create)
 		v1.GET("/reviews", reviewHandler.List)
 		v1.GET("/reviews/:id", reviewHandler.Get)
+		v1.POST("/reviews/:id/approve", reviewHandler.Approve)
+		v1.POST("/reviews/:id/merge", reviewHandler.Merge)
+		v1.GET("/reviews/:id/reject-comment-draft", reviewHandler.GetRejectCommentDraft)
+		v1.POST("/reviews/:id/reject", reviewHandler.Reject)
 	}
 }

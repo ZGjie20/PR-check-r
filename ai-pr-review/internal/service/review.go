@@ -15,6 +15,7 @@ import (
 )
 
 var ErrReviewNotFound = errors.New("review not found")
+var ErrCommentRequired = errors.New("comment is required")
 
 type ReviewService struct {
 	ghClient  *ghclient.Client
