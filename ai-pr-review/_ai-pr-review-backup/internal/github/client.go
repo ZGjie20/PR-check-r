@@ -148,3 +148,67 @@ func (c *Client) listCommitMessages(ctx context.Context, owner, repo string, num
 
 	return messages, nil
 }
+
+func (c *Client) ApprovePR(ctx context.Context, owner, repo string, number int, body string) error {
+	return c.createPRReview(ctx, owner, repo, number, "APPROVE", body)
+}
+
+func (c *Client) RequestChangesPR(ctx context.Context, owner, repo string, number int, body string) error {
+	return c.createPRReview(ctx, owner, repo, number, "REQUEST_CHANGES", body)
+}
+
+func (c *Client) MergePR(ctx context.Context, owner, repo string, number int) error {
+	result, resp, err := c.client.PullRequests.Merge(ctx, owner, repo, number, "", &gh.PullRequestOptions{
+		MergeMethod: "merge",
+	})
+	if err != nil {
+		return fmt.Errorf("merge pull request: %s", formatGitHubError(resp, err))
+	}
+	if result != nil && result.GetMerged() {
+		return nil
+	}
+	return fmt.Errorf("merge pull request: merge was not completed")
+}
+
+func (c *Client) CreatePRComment(ctx context.Context, owner, repo string, number int, body string) error {
+	_, resp, err := c.client.Issues.CreateComment(ctx, owner, repo, number, &gh.IssueComment{
+		Body: gh.Ptr(body),
+	})
+	if err != nil {
+		return fmt.Errorf("create pull request comment: %s", formatGitHubError(resp, err))
+	}
+	return nil
+}
+
+func (c *Client) createPRReview(ctx context.Context, owner, repo string, number int, event, body string) error {
+	req := &gh.PullRequestReviewRequest{
+		Event: gh.Ptr(event),
+	}
+	if body != "" {
+		req.Body = gh.Ptr(body)
+	}
+
+	_, resp, err := c.client.PullRequests.CreateReview(ctx, owner, repo, number, req)
+	if err != nil {
+		return fmt.Errorf("create pull request review (%s): %s", event, formatGitHubError(resp, err))
+	}
+	return nil
+}
+
+func formatGitHubError(resp *gh.Response, err error) string {
+	if resp == nil {
+		return err.Error()
+	}
+	switch resp.StatusCode {
+	case 403:
+		return fmt.Sprintf("permission denied (403): %v", err)
+	case 405:
+		return fmt.Sprintf("method not allowed (405), PR may already be merged or closed: %v", err)
+	case 409:
+		return fmt.Sprintf("conflict (409), branch may be out of date or protected: %v", err)
+	case 422:
+		return fmt.Sprintf("validation failed (422), branch protection or required checks may block this action: %v", err)
+	default:
+		return fmt.Sprintf("status %d: %v", resp.StatusCode, err)
+	}
+}
